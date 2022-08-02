@@ -29,9 +29,11 @@ class Bindings_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        bindings = []
-        for binding_node in xml_node.iter(tag=xml_tags.Elements.BINDING):
-            bindings.append(Rule_Binding.from_xml_node(binding_node))
+        bindings = [
+            Rule_Binding.from_xml_node(binding_node)
+            for binding_node in xml_node.iter(tag=xml_tags.Elements.BINDING)
+        ]
+
         return cls(bindings)
 
 
@@ -67,9 +69,11 @@ class Rules_List(XML_List):
         """
         count = get_xml_int_value(xml_node, xml_tags.Elements.COUNT)
         total = get_xml_int_value(xml_node, xml_tags.Elements.TOTAL)
-        rules = []
-        for rule_node in xml_node.iter(tag=xml_tags.Elements.RULE):
-            rules.append(Rule.from_xml_node(rule_node))
+        rules = [
+            Rule.from_xml_node(rule_node)
+            for rule_node in xml_node.iter(tag=xml_tags.Elements.RULE)
+        ]
+
         return cls(count, total, rules)
 
 
@@ -87,9 +91,11 @@ class Policy_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        policies = []
-        for policy_node in xml_node.iter(tag=xml_tags.Elements.POLICY):
-            policies.append(Policy.from_xml_node(policy_node))
+        policies = [
+            Policy.from_xml_node(policy_node)
+            for policy_node in xml_node.iter(tag=xml_tags.Elements.POLICY)
+        ]
+
         return cls(policies)
 
 
@@ -127,10 +133,16 @@ class Shadowed_Rule(XML_Object_Base):
         rule = Rule.from_xml_node(get_xml_node(xml_node, xml_tags.Elements.RULE))
         shadowing_rules = []
 
-        shadowing_rules_node = get_xml_node(xml_node, xml_tags.Elements.SHADOWING_RULES, True)
-        if shadowing_rules_node:
-            for rule_node in shadowing_rules_node.iter(tag=xml_tags.Elements.RULE):
-                shadowing_rules.append(Rule.from_xml_node(rule_node))
+        if shadowing_rules_node := get_xml_node(
+            xml_node, xml_tags.Elements.SHADOWING_RULES, True
+        ):
+            shadowing_rules.extend(
+                Rule.from_xml_node(rule_node)
+                for rule_node in shadowing_rules_node.iter(
+                    tag=xml_tags.Elements.RULE
+                )
+            )
+
         else:
             shadowing_rules = None
         return cls(rule, shadowing_rules)
@@ -198,12 +210,17 @@ class Rule_Documentation(XML_Object_Base):
         legacy_rule = get_xml_text_value(xml_node, xml_tags.Elements.LEGACY_RULE)
         permissiveness_level = get_xml_text_value(xml_node, xml_tags.Elements.PERMISSIVENESS_LEVEL)
         last_hit = get_xml_text_value(xml_node, xml_tags.Elements.LAST_HIT)
-        record_sets = []
-        for record_set_node in xml_node.iter(tag=xml_tags.Elements.RECORD_SET):
-            record_sets.append(Record_Set.from_xml_node(record_set_node))
-        secure_app_applications = []
-        for secure_app_application_node in xml_node.iter(tag=xml_tags.Elements.SECURE_APP_APPLICATION):
-            secure_app_applications.append(SecureApp_Application.from_xml_node(secure_app_application_node))
+        record_sets = [
+            Record_Set.from_xml_node(record_set_node)
+            for record_set_node in xml_node.iter(tag=xml_tags.Elements.RECORD_SET)
+        ]
+
+        secure_app_applications = [
+            SecureApp_Application.from_xml_node(secure_app_application_node)
+            for secure_app_application_node in xml_node.iter(
+                tag=xml_tags.Elements.SECURE_APP_APPLICATION
+            )
+        ]
 
         return cls(tech_owner, comment, record_sets, secure_app_applications, False, legacy_rule, permissiveness_level, last_hit)
 
@@ -364,10 +381,7 @@ class Rule(XML_Object_Base, Comparable):
             dst_negated = "NOT "
         if self.dst_services_negated and str_to_bool(self.dst_services_negated):
             srv_negated = "NOT "
-        if self.comment:
-            comment_str = "COMMENT {}".format(self.comment)
-        else:
-            comment_str = ""
+        comment_str = f"COMMENT {self.comment}" if self.comment else ""
         return "ACTION {action} FROM {neg_src}{src} TO {neg_dst}{dst} SERVICE {neg_srv}{srv} {comment}".format(
                 action=self.action, neg_src=src_negated, src=[str(src) for src in self.src_networks],
                 neg_dst=dst_negated, dst=[str(dst) for dst in self.dst_networks], neg_srv=srv_negated,
@@ -377,8 +391,8 @@ class Rule(XML_Object_Base, Comparable):
     def tuple_header(self):
         if self.src_networks and self.dst_networks:
             return "Rule Number", "Source Negated", "Source", "Destination Negated", "Destination", "Services " \
-                                                                                                    "Negated", \
-                   "Services", "Action"
+                                                                                                        "Negated", \
+                       "Services", "Action"
         else:
             return "VPN", "Applications"
 
@@ -421,22 +435,16 @@ class Rule_Binding(XML_Object_Base):
         """
         acl_node = get_xml_node(xml_node, xml_tags.Elements.ACL, True)
         policy_node = get_xml_node(xml_node, xml_tags.Elements.POLICY, True)
-        if acl_node is not None:
-            acl = Access_List.from_xml_node(acl_node)
-        else:
-            acl = None
-        if policy_node is not None:
-            policy = Policy.from_xml_node(policy_node)
-        else:
-            policy = None
+        acl = Access_List.from_xml_node(acl_node) if acl_node is not None else None
+        policy = Policy.from_xml_node(policy_node) if policy_node is not None else None
         default = get_xml_text_value(xml_node, xml_tags.Elements.DEFAULT)
-        from_zone_node = get_xml_node(xml_node, xml_tags.Elements.FROM_ZONE, True)
-        if from_zone_node:
+        if from_zone_node := get_xml_node(
+            xml_node, xml_tags.Elements.FROM_ZONE, True
+        ):
             from_zone = Rule_Binding_Zone.from_xml_node(from_zone_node)
         else:
             from_zone = None
-        to_zone_node = get_xml_node(xml_node, xml_tags.Elements.TO_ZONE, True)
-        if to_zone_node:
+        if to_zone_node := get_xml_node(xml_node, xml_tags.Elements.TO_ZONE, True):
             to_zone = Rule_Binding_Zone.from_xml_node(to_zone_node)
         else:
             to_zone = None
@@ -545,14 +553,10 @@ class Rule_Track(XML_Object_Base):
         return cls(interval, level)
 
     def is_enabled(self):
-        if self.level != Rule_Track.NONE:
-            return True
-        return False
+        return self.level != Rule_Track.NONE
 
     def is_logged(self):
-        if self.level == Rule_Track.LOG:
-            return True
-        return False
+        return self.level == Rule_Track.LOG
 
 
 class Access_List(XML_Object_Base):
@@ -615,10 +619,10 @@ class Interface_IP(XML_Object_Base, IPNetworkMixin):
 
         :rtype: netaddr.IPNetwork
         """
-        return netaddr.IPNetwork(self.ip + "/" + self.netmask)
+        return netaddr.IPNetwork(f"{self.ip}/{self.netmask}")
 
     def __str__(self):
-        return "{}/{}".format(self.ip, netmask_to_cidr(self.netmask))
+        return f"{self.ip}/{netmask_to_cidr(self.netmask)}"
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -753,18 +757,17 @@ class Single_Service(Service):
     def __str__(self):
         iana_protocols = get_iana_protocols()
         if self.min == self.max:
-            return "{} {}".format(iana_protocols[int(self.protocol)], self.min)
+            return f"{iana_protocols[int(self.protocol)]} {self.min}"
         else:
-            return "{} {}-{}".format(iana_protocols[int(self.protocol)], self.min, self.max)
+            return f"{iana_protocols[int(self.protocol)]} {self.min}-{self.max}"
 
     def as_service_type(self):
-        if self.protocol is not None:
-            if self.min == self.max:
-                return Single_Service_Type(self.protocol, self.min)
-            else:
-                return Range_Service_Type(self.protocol, self.min, self.max)
-        else:
+        if self.protocol is None:
             return Any_Service_Type()
+        if self.min == self.max:
+            return Single_Service_Type(self.protocol, self.min)
+        else:
+            return Range_Service_Type(self.protocol, self.min, self.max)
 
 
 class Group_Service(Service):
@@ -798,10 +801,16 @@ class Group_Service(Service):
     def __str__(self):
         spacer = 4 * " "
         if self.members:
-            return "{}Members:\n{}{}".format(spacer, 2 * spacer, "\n{}".format(2 * spacer).join(
-                    [member.display_name for member in self.members]))
+            return "{}Members:\n{}{}".format(
+                spacer,
+                2 * spacer,
+                f"\n{2 * spacer}".join(
+                    [member.display_name for member in self.members]
+                ),
+            )
+
         else:
-            return "{}No members".format(spacer)
+            return f"{spacer}No members"
 
     def as_service_type(self):
         return Group_Service_Type(self.members)
@@ -843,7 +852,7 @@ class Network_Objects_List(XML_List):
             elif network_object_type == xml_tags.Attributes.NETWORK_OBJECT_TYPE_DOMAIN:
                 network_objects.append(DomainNetworkObject.from_xml_node(network_object_node))
             else:
-                message = "Got unknown type '{}'".format(network_object_type)
+                message = f"Got unknown type '{network_object_type}'"
                 logger.error(message)
                 raise ValueError(message)
         return cls(network_objects)
@@ -882,10 +891,7 @@ class Basic_Network_Object(Network_Object):
                    uid)
 
     def __str__(self):
-        if self.ip is not None:
-            return str(self.ip)
-        else:
-            return "Any"
+        return str(self.ip) if self.ip is not None else "Any"
 
     def as_netaddr_obj(self):
         if self.ip is not None:
@@ -926,7 +932,7 @@ class Range_Network_Object(Network_Object):
                    implicit, uid)
 
     def __str__(self):
-        return "{}-{}".format(self.first_ip, self.last_ip)
+        return f"{self.first_ip}-{self.last_ip}"
 
     def as_netaddr_obj(self):
         return netaddr.IPRange(self.first_ip, self.last_ip, flags=netaddr.ZEROFILL)
@@ -1098,10 +1104,10 @@ class Subnet_Network_Object(Network_Object):
         return cls(display_name, is_global, object_id, name, object_type, ip, netmask, device_id, comment, implicit, uid)
 
     def __str__(self):
-        return "{}/{}".format(self.ip, self.netmask)
+        return f"{self.ip}/{self.netmask}"
 
     def as_netaddr_obj(self):
-        return netaddr.IPNetwork("{}/{}".format(self.ip, self.netmask))
+        return netaddr.IPNetwork(f"{self.ip}/{self.netmask}")
 
 
 class Base_Network_Object(Network_Object):
@@ -1149,10 +1155,16 @@ class Base_Network_Object(Network_Object):
     def __str__(self):
         spacer = 4 * " "
         if self.members:
-            return "{}Members:\n{}{}".format(spacer, 2 * spacer, "\n{}".format(2 * spacer).join(
-                    [member.display_name for member in self.members]))
+            return "{}Members:\n{}{}".format(
+                spacer,
+                2 * spacer,
+                f"\n{2 * spacer}".join(
+                    [member.display_name for member in self.members]
+                ),
+            )
+
         else:
-            return "{}No members".format(spacer)
+            return f"{spacer}No members"
 
 
 class Group_Network_Object(Base_Network_Object):
@@ -1232,9 +1244,11 @@ class Devices_And_Bindings_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        items = []
-        for device_and_bindings_node in xml_node:
-            items.append(Device_And_Bindings.from_xml_node(device_and_bindings_node))
+        items = [
+            Device_And_Bindings.from_xml_node(device_and_bindings_node)
+            for device_and_bindings_node in xml_node
+        ]
+
         return cls(items)
 
 
@@ -1253,9 +1267,11 @@ class Bindings_And_Rules_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        items = []
-        for device_and_bindings_node in xml_node:
-            items.append(Binding_And_Rules.from_xml_node(device_and_bindings_node))
+        items = [
+            Binding_And_Rules.from_xml_node(device_and_bindings_node)
+            for device_and_bindings_node in xml_node
+        ]
+
         return cls(items)
 
 
@@ -1272,10 +1288,12 @@ class Binding_And_Rules(XML_Object_Base):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        rules = []
         rules_node = get_xml_node(xml_node, xml_tags.Elements.RULES)
-        for rule_node in rules_node.iter(tag=xml_tags.Elements.RULE):
-            rules.append(Rule.from_xml_node(rule_node))
+        rules = [
+            Rule.from_xml_node(rule_node)
+            for rule_node in rules_node.iter(tag=xml_tags.Elements.RULE)
+        ]
+
         binding_node = get_xml_node(xml_node, xml_tags.Elements.BINDING)
         binding = Rule_Binding.from_xml_node(binding_node)
         return cls(binding, rules)
@@ -1340,9 +1358,11 @@ class Interfaces_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        interfaces = []
-        for interface_node in xml_node.iter(tag=xml_tags.Elements.INTERFACE):
-            interfaces.append(Interface.from_xml_node(interface_node))
+        interfaces = [
+            Interface.from_xml_node(interface_node)
+            for interface_node in xml_node.iter(tag=xml_tags.Elements.INTERFACE)
+        ]
+
         return cls(interfaces)
 
 
@@ -1360,9 +1380,11 @@ class Topology_Interfaces_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        interfaces = []
-        for interface_node in xml_node.iter(tag=xml_tags.Elements.INTERFACE):
-            interfaces.append(Topology_Interface.from_xml_node(interface_node))
+        interfaces = [
+            Topology_Interface.from_xml_node(interface_node)
+            for interface_node in xml_node.iter(tag=xml_tags.Elements.INTERFACE)
+        ]
+
         return cls(interfaces)
 
 
@@ -1522,13 +1544,13 @@ class ChangeAuthorizationBinding(XML_Object_Base):
                                                                     xml_tags.Elements.UNAUTHORIZED_CLOSED_ACCESS,
                                                                     xml_tags.Elements.BLOCKINGRULESDTO,
                                                                     Change_Blocking_Rules)
-        binding_node = get_xml_node(xml_node, xml_tags.Elements.BINDING, True)
-        if binding_node:
+        if binding_node := get_xml_node(xml_node, xml_tags.Elements.BINDING, True):
             binding = Rule_Binding.from_xml_node(binding_node)
         else:
             binding = None
-        policy_zone_pair_node = get_xml_node(xml_node, xml_tags.Elements.POLICY_ZONE_PAIR, True)
-        if policy_zone_pair_node:
+        if policy_zone_pair_node := get_xml_node(
+            xml_node, xml_tags.Elements.POLICY_ZONE_PAIR, True
+        ):
             policy_zone_pair = PolicyZonePair.from_xml_node(policy_zone_pair_node)
         else:
             policy_zone_pair = None
@@ -1549,9 +1571,13 @@ class ChangeAuthorizationBindings(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        change_auth_bindings = []
-        for change_auth_binding_node in xml_node.iter(tag=xml_tags.Elements.CHANGE_AUTHORIZATION_BINDING):
-            change_auth_bindings.append(ChangeAuthorizationBinding.from_xml_node(change_auth_binding_node))
+        change_auth_bindings = [
+            ChangeAuthorizationBinding.from_xml_node(change_auth_binding_node)
+            for change_auth_binding_node in xml_node.iter(
+                tag=xml_tags.Elements.CHANGE_AUTHORIZATION_BINDING
+            )
+        ]
+
         return cls(change_auth_bindings)
 
 
@@ -1602,11 +1628,7 @@ class SecurityRequirement(XML_Object_Base):
             rule_properties = RuleProperties.from_xml_node(rule_properties_node)
 
         flow_node = get_xml_node(xml_node, xml_tags.Elements.FLOW, optional=True)
-        if flow_node is None:
-            flow = None
-        else:
-            flow = Flow.from_xml_node(flow_node)
-
+        flow = None if flow_node is None else Flow.from_xml_node(flow_node)
         allowed_services_node = get_xml_node(xml_node, xml_tags.Elements.ALLOWED_SERVICES, optional=True)
         if allowed_services_node is None:
             allowed_services = None

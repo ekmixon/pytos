@@ -91,8 +91,10 @@ class ServerDecommissionRequest(XML_Object_Base):
                    designer_result, verifier_result, impact_analysis_result, reado_only)
 
     def to_pretty_str(self):
-        server_decommission_request_string = "Server Decommission {}:\n".format(self.order)
-        server_decommission_request_string += "\tTargets: "
+        server_decommission_request_string = (
+            f"Server Decommission {self.order}:\n" + "\tTargets: "
+        )
+
         for target in self.targets:
             server_decommission_request_string += target.to_pretty_str()
             server_decommission_request_string += "\n\tServers: "
@@ -100,8 +102,11 @@ class ServerDecommissionRequest(XML_Object_Base):
             server_decommission_request_string += server.to_pretty_str()
         if self.comment is not None:
             server_decommission_request_string += "\n" + textwrap.fill(
-                "\tComment: {}".format(unescape(self.comment)),
-                initial_indent='', subsequent_indent='\t\t ')
+                f"\tComment: {unescape(self.comment)}",
+                initial_indent='',
+                subsequent_indent='\t\t ',
+            )
+
         return server_decommission_request_string
 
     def __str__(self):

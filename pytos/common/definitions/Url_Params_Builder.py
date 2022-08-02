@@ -29,17 +29,17 @@ class URLParamBuilderDict(URLParamBuilderInterface):
         :param params: dictionary with name: value
         :type params: dict
         """
-        if params:
-            self.params = params
-        else:
-            self.params = {}
+        self.params = params or {}
 
     def build(self, *, prepend_question_mark=True):
         if not self.params:
             return ""
-        filter_params = "&".join("{}={}".format(key, value) for key, value in self.params.items())
+        filter_params = "&".join(
+            f"{key}={value}" for key, value in self.params.items()
+        )
+
         if prepend_question_mark:
-            filter_params = "?{}".format(filter_params)
+            filter_params = f"?{filter_params}"
         return filter_params
 
     def set(self, key, value):

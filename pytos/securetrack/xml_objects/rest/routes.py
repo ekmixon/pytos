@@ -26,7 +26,7 @@ class Route(XML_Object_Base):
         return cls(network_ip, network_mask, next_hop_ip, interface)
 
     def __str__(self):
-        return "Route({},{},{},{})".format(self.network_ip, self.network_mask, self.next_hop_ip, self.interface)
+        return f"Route({self.network_ip},{self.network_mask},{self.next_hop_ip},{self.interface})"
 
 
 class RoutesList(XML_List):
@@ -40,7 +40,9 @@ class RoutesList(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        routes = []
-        for route_node in xml_node.iter(tag=xml_tags.Elements.ROUTE):
-            routes.append(Route.from_xml_node(route_node))
+        routes = [
+            Route.from_xml_node(route_node)
+            for route_node in xml_node.iter(tag=xml_tags.Elements.ROUTE)
+        ]
+
         return cls(routes)

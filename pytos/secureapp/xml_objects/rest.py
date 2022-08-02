@@ -25,9 +25,11 @@ class Applications_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        applications = []
-        for application_node in xml_node.iter(tag=Elements.APPLICATION):
-            applications.append(Application.from_xml_node(application_node))
+        applications = [
+            Application.from_xml_node(application_node)
+            for application_node in xml_node.iter(tag=Elements.APPLICATION)
+        ]
+
         return cls(applications)
 
 
@@ -62,12 +64,10 @@ class Application(XML_Object_Base, Comparable):
         name = get_xml_text_value(xml_node, Elements.NAME)
         comment = get_xml_text_value(xml_node, Elements.COMMENT)
         decommissioned = get_xml_text_value(xml_node, Elements.DECOMMISSIONED)
-#         owner = Application_Owner.from_xml_node(get_xml_node(xml_node, Elements.OWNER))
-        owner_node = get_xml_node(xml_node, Elements.OWNER, optional=True)
-        if owner_node:
-                owner = Application_Owner.from_xml_node(owner_node)
+        if owner_node := get_xml_node(xml_node, Elements.OWNER, optional=True):
+            owner = Application_Owner.from_xml_node(owner_node)
         else:
-                owner = Application_Owner(None, 'No owner', 'No owner', URL_Link(''))
+            owner = Application_Owner(None, 'No owner', 'No owner', URL_Link(''))
         created = get_xml_text_value(xml_node, Elements.CREATED)
         modified = get_xml_text_value(xml_node, Elements.MODIFIED)
         status = get_xml_text_value(xml_node, Elements.STATUS)
@@ -81,15 +81,17 @@ class Application(XML_Object_Base, Comparable):
             customer = Customer.from_xml_node(customer_xml_node)
         else:
             customer = None
-            
+
         connection_to_application_packs = XML_List.from_xml_node_by_tags(xml_node,
                                                                          Elements.CONNECTION_TO_APPLICATION_PACKS,
                                                                          Elements.CONNECTION_TO_APPLICATION_PACK,
                                                                          Connection_To_Application_Pack, True)
 
-        connections = []
-        for connection_node in xml_node.iter(tag=Elements.CONNECTION):
-            connections.append(Application_Connection.from_xml_node(connection_node))
+        connections = [
+            Application_Connection.from_xml_node(connection_node)
+            for connection_node in xml_node.iter(tag=Elements.CONNECTION)
+        ]
+
         return cls(app_id, name, comment, decommissioned, owner, editors, created, modified, status, connections,
                    open_tickets, customer, connection_to_application_packs, viewers)
 
@@ -100,7 +102,7 @@ class Application(XML_Object_Base, Comparable):
         return self.id, self.name
 
     def __repr__(self):
-        return 'Application. Name: {}, Owner: {}'.format(self.name, self.owner.display_name)
+        return f'Application. Name: {self.name}, Owner: {self.owner.display_name}'
 
     def __str__(self):
         return repr(self)
@@ -326,9 +328,11 @@ class Tag_Servers(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        tags = []
-        for connection_node in xml_node.iter(tag=Elements.TAG):
-            tags.append(Tag_Reference.from_xml_node(connection_node))
+        tags = [
+            Tag_Reference.from_xml_node(connection_node)
+            for connection_node in xml_node.iter(tag=Elements.TAG)
+        ]
+
         return cls(tags)
 
 
@@ -347,9 +351,11 @@ class User_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        users = []
-        for user_node in xml_node.iter(tag=Elements.USER):
-            users.append(User.from_xml_node(user_node))
+        users = [
+            User.from_xml_node(user_node)
+            for user_node in xml_node.iter(tag=Elements.USER)
+        ]
+
         return cls(users)
 
 
@@ -393,9 +399,11 @@ class Connection_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        connections = []
-        for connection_node in xml_node.iter(tag=Elements.CONNECTION):
-            connections.append(Detailed_Application_Connection.from_xml_node(connection_node))
+        connections = [
+            Detailed_Application_Connection.from_xml_node(connection_node)
+            for connection_node in xml_node.iter(tag=Elements.CONNECTION)
+        ]
+
         return cls(connections)
 
 
@@ -405,9 +413,11 @@ class ConnectionExtendedList(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        connections = []
-        for con_node in xml_node.iter(tag=Elements.CONNECTION_EXTENDED):
-            connections.append(ConnectionExtended.from_xml_node(con_node))
+        connections = [
+            ConnectionExtended.from_xml_node(con_node)
+            for con_node in xml_node.iter(tag=Elements.CONNECTION_EXTENDED)
+        ]
+
         return cls(connections)
 
 
@@ -455,12 +465,10 @@ class Detailed_Connection_To_Application_Pack(XML_Object_Base):
         created = get_xml_text_value(xml_node, Elements.CREATED)
         modified = get_xml_text_value(xml_node, Elements.MODIFIED)
         app = None
-        app_node = get_xml_node(xml_node, Elements.APPLICATION)
-        if app_node:
+        if app_node := get_xml_node(xml_node, Elements.APPLICATION):
             app = Application_Reference.from_xml_node(app_node)
         application_pack = None
-        app_pack_node = get_xml_node(xml_node, Elements.APPLICATION_PACK)
-        if app_pack_node:
+        if app_pack_node := get_xml_node(xml_node, Elements.APPLICATION_PACK):
             Application_Pack.from_xml_node(app_pack_node)
         connection_to_applications = XML_List.from_xml_node_by_tags(xml_node, Elements.CONNECTION_TO_APPLICATIONS,
                                                                     Elements.CONNECTION_TO_APPLICATION,
@@ -486,10 +494,13 @@ class Connection_To_Application_Packs(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        connection_to_application_packs = []
-        for con_to_app_node in xml_node.iter(tag=Elements.CONNECTION_TO_APPLICATION_PACK):
-            connection_to_application_packs.append(
-                    Detailed_Connection_To_Application_Pack.from_xml_node(con_to_app_node))
+        connection_to_application_packs = [
+            Detailed_Connection_To_Application_Pack.from_xml_node(con_to_app_node)
+            for con_to_app_node in xml_node.iter(
+                tag=Elements.CONNECTION_TO_APPLICATION_PACK
+            )
+        ]
+
         return cls(connection_to_application_packs)
 
 
@@ -508,9 +519,13 @@ class Connections_To_Applications(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        connections_to_applications = []
-        for con_to_app_node in xml_node.iter(tag=Elements.CONNECTION_TO_APPLICATION):
-            connections_to_applications.append(Detailed_Connection_To_Application.from_xml_node(con_to_app_node))
+        connections_to_applications = [
+            Detailed_Connection_To_Application.from_xml_node(con_to_app_node)
+            for con_to_app_node in xml_node.iter(
+                tag=Elements.CONNECTION_TO_APPLICATION
+            )
+        ]
+
         return cls(connections_to_applications)
 
 
@@ -541,24 +556,30 @@ class ConnectionExtended(XML_Object_Base):
         sources = []
         destinations = []
         services = []
-        sources_node = get_xml_node(xml_node, Elements.SOURCES, True)
-        if sources_node:
+        if sources_node := get_xml_node(xml_node, Elements.SOURCES, True):
             for src_node in sources_node.iter(tag=Elements.SOURCE):
                 if src_node.attrib[Attributes.XSI_NAMESPACE_TYPE] in (Attributes.USER_TYPE_GROUP, Attributes.USER_TYPE):
                     sources.append(UserGroup.from_xml_node_auto_type(src_node))
                 else:
                     sources.append(Network_Object.from_xml_node_auto_type(src_node))
-        destinations_node = get_xml_node(xml_node, Elements.DESTINATIONS, True)
-        if destinations_node:
-            for dst_node in destinations_node.iter(tag=Elements.DESTINATION):
-                destinations.append(Network_Object.from_xml_node_auto_type(dst_node))
-        services_node = get_xml_node(xml_node, Elements.SERVICES, True)
-        if services_node:
-            for srv_node in services_node.iter(tag=Elements.SERVICE):
-                services.append(Service_Object.from_xml_node_auto_type(srv_node))
+        if destinations_node := get_xml_node(
+            xml_node, Elements.DESTINATIONS, True
+        ):
+            destinations.extend(
+                Network_Object.from_xml_node_auto_type(dst_node)
+                for dst_node in destinations_node.iter(tag=Elements.DESTINATION)
+            )
+
+        if services_node := get_xml_node(xml_node, Elements.SERVICES, True):
+            services.extend(
+                Service_Object.from_xml_node_auto_type(srv_node)
+                for srv_node in services_node.iter(tag=Elements.SERVICE)
+            )
+
         connection_to_application = None
-        con_to_app_node = get_xml_node(xml_node, Elements.CONNECTION_TO_APPLICATION, True)
-        if con_to_app_node:
+        if con_to_app_node := get_xml_node(
+            xml_node, Elements.CONNECTION_TO_APPLICATION, True
+        ):
             connection_to_application = Detailed_Connection_To_Application.from_xml_node(con_to_app_node)
         return cls(con_id, name, comment, open_tickets, external, status, sources, services, destinations,
                    connection_to_application)
@@ -599,8 +620,9 @@ class Detailed_Application_Connection(XML_Object_Base):
         open_tickets = XML_List.from_xml_node_by_tags(xml_node, Elements.OPEN_TICKETS, Elements.TICKET,
                                                       Application_Open_Ticket, True)
         connection_to_application = None
-        connection_to_application_node = get_xml_node(xml_node, Elements.CONNECTION_TO_APPLICATION, True)
-        if connection_to_application_node:
+        if connection_to_application_node := get_xml_node(
+            xml_node, Elements.CONNECTION_TO_APPLICATION, True
+        ):
             connection_to_application = Connection_To_Application.from_xml_node(connection_to_application_node)
         return cls(connection_id, name, external, sources, services, destinations, comment, status, open_tickets,
                    connection_to_application)
@@ -609,11 +631,7 @@ class Detailed_Application_Connection(XML_Object_Base):
         srcs_string = ','.join(str(src) for src in self.sources)
         dsts_string = ','.join(str(dst) for dst in self.destinations)
         srvs_string = ','.join(str(srv) for srv in self.services)
-        return 'Detailed Application Connection. Name: {}, <Sources: {}>, <Destinations: {}>, <Services: {}>'.format(
-                                                                                                     self.name,
-                                                                                                     srcs_string,
-                                                                                                     dsts_string,
-                                                                                                     srvs_string)
+        return f'Detailed Application Connection. Name: {self.name}, <Sources: {srcs_string}>, <Destinations: {dsts_string}>, <Services: {srvs_string}>'
 
     def __str__(self):
         return repr(self)
@@ -696,9 +714,13 @@ class Application_Interfaces(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        app_interfaces = []
-        for app_interface_node in xml_node.iter(tag=Elements.APPLICATION_INTERFACE):
-            app_interfaces.append(Application_Interface.from_xml_node(app_interface_node))
+        app_interfaces = [
+            Application_Interface.from_xml_node(app_interface_node)
+            for app_interface_node in xml_node.iter(
+                tag=Elements.APPLICATION_INTERFACE
+            )
+        ]
+
         return cls(app_interfaces)
 
 
@@ -743,7 +765,9 @@ class Services_List(XML_List):
                 services.append(Group_Service.from_xml_node(service_node))
             else:
                 raise ValueError(
-                        "Unknown service type '{}'.".format(service_node.attrib[Attributes.XSI_NAMESPACE_TYPE]))
+                    f"Unknown service type '{service_node.attrib[Attributes.XSI_NAMESPACE_TYPE]}'."
+                )
+
         return cls(services)
 
 
@@ -786,13 +810,12 @@ class Single_Service(Service_Object):
                    uid, comment, app_id, timeout)
 
     def as_service_type(self):
-        if self.protocol is not None:
-            if self.min == self.max:
-                return Single_Service_Type(self.protocol, self.min)
-            else:
-                return Range_Service_Type(self.protocol, self.min, self.max)
-        else:
+        if self.protocol is None:
             return Any_Service_Type()
+        if self.min == self.max:
+            return Single_Service_Type(self.protocol, self.min)
+        else:
+            return Range_Service_Type(self.protocol, self.min, self.max)
 
     def _key(self):
         return self.protocol, self.min, self.max, self.negate, self.uid, self.comment, self.timeout
@@ -804,7 +827,7 @@ class Single_Service(Service_Object):
                    st_service_object.max, st_service_object.negate, None, st_service_object.comment)
 
     def __repr__(self):
-        return 'type: {}, {}'.format(self.type, self.display_name)
+        return f'type: {self.type}, {self.display_name}'
 
     def __str__(self):
         return repr(self)
@@ -853,9 +876,12 @@ class Group_Service(Service_Object):
 
     @classmethod
     def from_st_service_object(cls, st_service_object):
-        members = []
-        for member in st_service_object.members:
-            members.append(Base_Link_Target(Elements.MEMBER, None, member.display_name, member.name, None))
+        members = [
+            Base_Link_Target(
+                Elements.MEMBER, None, member.display_name, member.name, None
+            )
+            for member in st_service_object.members
+        ]
 
         return cls(st_service_object.display_name, st_service_object.global_, None, st_service_object.name,
                    st_service_object.type, members, None)
@@ -936,9 +962,11 @@ class Network_Objects_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        network_objects = []
-        for network_object_node in xml_node.iter(tag=Elements.NETWORK_OBJECT):
-            network_objects.append(Network_Object.from_xml_node_auto_type(network_object_node))
+        network_objects = [
+            Network_Object.from_xml_node_auto_type(network_object_node)
+            for network_object_node in xml_node.iter(tag=Elements.NETWORK_OBJECT)
+        ]
+
         return cls(network_objects)
 
 
@@ -1041,8 +1069,7 @@ class Range_Network_Object(Network_Object):
         return netaddr.IPRange(self.first_ip, self.last_ip)
 
     def __repr__(self):
-        return 'Range Network Object. Name: {}, First IP: {}, Last IP: {}'.format(self.display_name, self.first_ip,
-                                                                                  self.last_ip)
+        return f'Range Network Object. Name: {self.display_name}, First IP: {self.first_ip}, Last IP: {self.last_ip}'
 
     def __str__(self):
         return repr(self)
@@ -1085,7 +1112,7 @@ class Host_Network_Object(Network_Object):
         return self.ip,
 
     def __repr__(self):
-        return 'Host Network Object. Name: {}, IP: {}'.format(self.display_name, self.ip)
+        return f'Host Network Object. Name: {self.display_name}, IP: {self.ip}'
 
     def __str__(self):
         return repr(self)
@@ -1129,14 +1156,15 @@ class Subnet_Network_Object(Network_Object):
                    st_network_obj.ip, st_network_obj.netmask)
 
     def as_netaddr_obj(self):
-        return netaddr.IPNetwork(str(self.ip) + "/" + str(self.netmask or self.prefix))
+        return netaddr.IPNetwork(
+            f"{str(self.ip)}/{str((self.netmask or self.prefix))}"
+        )
 
     def _key(self):
         return self.ip, self.netmask or self.prefix
 
     def __repr__(self):
-        return 'Subnet Network Object. Name: {}, IP: {}, Netmask: {}'.format(self.display_name, self.ip,
-                                                                             self.netmask or self.prefix)
+        return f'Subnet Network Object. Name: {self.display_name}, IP: {self.ip}, Netmask: {self.netmask or self.prefix}'
 
     def __str__(self):
         return repr(self)
@@ -1202,7 +1230,7 @@ class Virtual_Server_Network_Object(Network_Object):
                    f5_device_name, port, comment, device_id, pool_member)
 
     def as_netaddr_obj(self):
-        return netaddr.IPNetwork(str(self.virtual_ip) + "/" + str(self.netmask))
+        return netaddr.IPNetwork(f"{str(self.virtual_ip)}/{str(self.netmask)}")
 
 
 class VM_Instance(Network_Object):
@@ -1281,9 +1309,11 @@ class Tags(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        tags = []
-        for tag_node in xml_node.iter(tag=Elements.TAG):
-            tags.append(Tag.from_xml_node(tag_node))
+        tags = [
+            Tag.from_xml_node(tag_node)
+            for tag_node in xml_node.iter(tag=Elements.TAG)
+        ]
+
         return cls(tags)
 
 
@@ -1298,9 +1328,11 @@ class VM_Instances(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        vm_instances = []
-        for vm_instance_node in xml_node.iter(tag=Elements.VM_INSTANCE):
-            vm_instances.append(VM_Instance.from_xml_node(vm_instance_node))
+        vm_instances = [
+            VM_Instance.from_xml_node(vm_instance_node)
+            for vm_instance_node in xml_node.iter(tag=Elements.VM_INSTANCE)
+        ]
+
         return cls(vm_instances)
 
 
@@ -1330,9 +1362,11 @@ class Interfaces(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        interfaces = []
-        for interface_node in xml_node.iter(tag=Elements.INTERFACE):
-            interfaces.append(Interface.from_xml_node(interface_node))
+        interfaces = [
+            Interface.from_xml_node(interface_node)
+            for interface_node in xml_node.iter(tag=Elements.INTERFACE)
+        ]
+
         return cls(interfaces)
 
 
@@ -1364,9 +1398,11 @@ class Interface_IPs(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        interface_ips = []
-        for interface_ip_node in xml_node.iter(tag=Elements.INTERFACE_IP):
-            interface_ips.append(Interface_IP.from_xml_node(interface_ip_node))
+        interface_ips = [
+            Interface_IP.from_xml_node(interface_ip_node)
+            for interface_ip_node in xml_node.iter(tag=Elements.INTERFACE_IP)
+        ]
+
         return cls(interface_ips)
 
 
@@ -1407,18 +1443,24 @@ class Group_Network_Object(Network_Object):
 
     @classmethod
     def from_st_network_object(cls, st_network_obj):
-        members = []
-        for member in st_network_obj.members:
-            members.append(Base_Link_Target(Elements.MEMBER, None, member.display_name, member.name, None))
+        members = [
+            Base_Link_Target(
+                Elements.MEMBER, None, member.display_name, member.name, None
+            )
+            for member in st_network_obj.members
+        ]
 
-        sa_group_obj = cls(st_network_obj.display_name, st_network_obj.global_, None, st_network_obj.name,
-                           st_network_obj.type, members)
-
-        return sa_group_obj
+        return cls(
+            st_network_obj.display_name,
+            st_network_obj.global_,
+            None,
+            st_network_obj.name,
+            st_network_obj.type,
+            members,
+        )
 
     def __repr__(self):
-        return 'Group Network Object. Name: {},Members: {}'.format(self.display_name,
-                                                                   ','.join(str(member) for member in self.members))
+        return f"Group Network Object. Name: {self.display_name},Members: {','.join((str(member) for member in self.members))}"
 
     def __str__(self):
         return repr(self)
@@ -1438,9 +1480,11 @@ class Customers_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        customers = []
-        for customer_node in xml_node.iter(tag=Elements.CUSTOMER):
-            customers.append(Detailed_Customer.from_xml_node(customer_node))
+        customers = [
+            Detailed_Customer.from_xml_node(customer_node)
+            for customer_node in xml_node.iter(tag=Elements.CUSTOMER)
+        ]
+
         return cls(customers)
 
 
@@ -1525,9 +1569,11 @@ class Security_Groups(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        security_groups = []
-        for security_group_node in xml_node.iter(tag=Elements.SECURITY_GROUP):
-            security_groups.append(Security_Group.from_xml_node(security_group_node))
+        security_groups = [
+            Security_Group.from_xml_node(security_group_node)
+            for security_group_node in xml_node.iter(tag=Elements.SECURITY_GROUP)
+        ]
+
         return cls(security_groups)
 
 

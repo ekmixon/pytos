@@ -44,7 +44,7 @@ class Application_Target(XML_Object_Base):
 
     def to_pretty_str(self):
         if self.application[0] is not None:
-            return "\n\t\tApplication: {}".format(self.application[0])
+            return f"\n\t\tApplication: {self.application[0]}"
         else:
             return ""
 
@@ -75,13 +75,11 @@ class Named_Access_Request_Device(Target_Base):
         return cls(num_id, object_name, object_type, object_details, management_name, management_id)
 
     def to_pretty_str(self):
-        return "\n\t\tManagement Name: {}\n\t\tObject Name: {}\n\t\tObject Details: {}".format(self.management_name,
-                                                                                               self.object_name,
-                                                                                               self.object_details)
+        return f"\n\t\tManagement Name: {self.management_name}\n\t\tObject Name: {self.object_name}\n\t\tObject Details: {self.object_details}"
 
     def __str__(self):
         if all([self.management_name, self.object_name, self.object_details]):
-            return "{}/{}/{}".format(self.management_name, self.object_name, self.object_details)
+            return f"{self.management_name}/{self.object_name}/{self.object_details}"
         else:
             return ""
 
@@ -125,10 +123,7 @@ class User_Target(XML_Object_Base):
         return cls(user)
 
     def to_pretty_str(self):
-        if self.user[0] is not None:
-            return "\n\t\tUser: {}".format(self.user[0])
-        else:
-            return ""
+        return f"\n\t\tUser: {self.user[0]}" if self.user[0] is not None else ""
 
     def __str__(self):
         return ",".join(self.user)
@@ -160,12 +155,10 @@ class IP_Range_Access_Request_Target(Network_Target):
         super().__init__(xml_tag, target_id, TYPE_RANGE, region)
 
     def to_pretty_str(self):
-        target_string = "\n\t\tFirst IP Address: {}\n\t\tLast IP Address: {}".format(self.range_first_ip,
-                                                                                     self.range_last_ip)
-        return target_string
+        return f"\n\t\tFirst IP Address: {self.range_first_ip}\n\t\tLast IP Address: {self.range_last_ip}"
 
     def __str__(self):
-        return "{}-{}".format(self.range_first_ip, self.range_last_ip)
+        return f"{self.range_first_ip}-{self.range_last_ip}"
 
     def as_netaddr_obj(self):
         """This returns a netaddr object representing the Ranged_Network_Target"""
@@ -215,19 +208,19 @@ class IP_Access_Request_Target(Network_Target):
 
     def to_pretty_str(self):
         if hasattr(self, 'netmask'):
-            return "\n\t\tIP Address: {}\n\t\tSubnet Mask: {}".format(self.ip_address, self.netmask)
+            return f"\n\t\tIP Address: {self.ip_address}\n\t\tSubnet Mask: {self.netmask}"
         elif hasattr(self, 'cidr'):
-            return "\n\t\tIP Address: {}\n\t\tCIDR: {}".format(self.ip_address, self.cidr)
+            return f"\n\t\tIP Address: {self.ip_address}\n\t\tCIDR: {self.cidr}"
         else:
-            return "\n\t\tIP Address: {}".format(self.ip_address)
+            return f"\n\t\tIP Address: {self.ip_address}"
 
     def __str__(self):
         if hasattr(self, 'netmask'):
-            return "{}/{}".format(self.ip_address, self.netmask)
+            return f"{self.ip_address}/{self.netmask}"
         elif hasattr(self, 'cidr'):
-            return "{}/{}".format(self.ip_address, self.cidr)
+            return f"{self.ip_address}/{self.cidr}"
         else:
-            return "{}".format(self.ip_address)
+            return f"{self.ip_address}"
 
     def as_netaddr_obj(self):
         """This returns a netaddr object representing the Network_Target"""
@@ -276,32 +269,37 @@ class DNS_Access_Request_Target(Network_Target):
     def to_pretty_str(self):
         target_string = ""
         if hasattr(self, 'ip_address') and self.ip_address:
-            target_string += "\n\t\tIP Address: {}".format(self.ip_address)
+            target_string += f"\n\t\tIP Address: {self.ip_address}"
         elif hasattr(self, 'dns_ip_addresses'):
-            target_string += "\n\t\tIP Addresses: {}".format(', '.join(ip.ip_address for ip in self.dns_ip_addresses))
+            target_string += f"\n\t\tIP Addresses: {', '.join((ip.ip_address for ip in self.dns_ip_addresses))}"
+
         if self.host_name:
-            target_string += "\n\t\tHostname: {}".format(self.host_name)
+            target_string += f"\n\t\tHostname: {self.host_name}"
         return target_string
 
     def __str__(self):
         if hasattr(self, 'ip_address') and self.ip_address:
-            return "{}/{}".format(self.host_name, self.ip_address)
+            return f"{self.host_name}/{self.ip_address}"
         elif hasattr(self, 'dns_ip_addresses'):
-            return "{}/{}".format(self.host_name, ', '.join(ip.ip_address for ip in self.dns_ip_addresses))
+            return f"{self.host_name}/{', '.join((ip.ip_address for ip in self.dns_ip_addresses))}"
 
     def as_netaddr_obj(self):
         """This returns a netaddr object representing the Network_Target"""
         if hasattr(self, 'ip_address'):
-            if not self.ip_address and self.host_name:
-                return netaddr.IPNetwork(socket.gethostbyname(self.host_name))
-            else:
-                return netaddr.IPNetwork(self.ip_address)
+            return (
+                netaddr.IPNetwork(socket.gethostbyname(self.host_name))
+                if not self.ip_address and self.host_name
+                else netaddr.IPNetwork(self.ip_address)
+            )
+
+        logger.info(
+            f'Object {self} has multiple DNS IP addresses, using the first one for conversion to netaddr obj'
+        )
+
+        if self.host_name:
+            return netaddr.IPNetwork(socket.gethostbyname(self.host_name))
         else:
-            logger.info('Object {} has multiple DNS IP addresses, using the first one for conversion to netaddr obj'.format(self))
-            if self.host_name:
-                return netaddr.IPNetwork(socket.gethostbyname(self.host_name))
-            else:
-                return netaddr.IPNetwork(self.dns_ip_addresses.ip_address)
+            return netaddr.IPNetwork(self.dns_ip_addresses.ip_address)
 
 
 class Any_Access_Request_Target(Access_Request_Target):
@@ -347,20 +345,20 @@ class Object_Access_Request_Target(Access_Request_Target):
         super().__init__(xml_tag, target_id, TYPE_OBJECT, region)
 
     def __str__(self):
-        return "{}/{}".format(self.object_name, self.object_details)
+        return f"{self.object_name}/{self.object_details}"
 
     def to_pretty_str(self):
         object_string = ""
         if self.management_name:
-            object_string += "\n\t\tManagement Name: {}".format(self.management_name)
+            object_string += f"\n\t\tManagement Name: {self.management_name}"
         if self.object_name:
-            object_string += "\n\t\tObject Name: {}".format(self.object_name)
+            object_string += f"\n\t\tObject Name: {self.object_name}"
         if self.object_details:
-            object_string += "\n\t\tObject Details: {}".format(self.object_details)
+            object_string += f"\n\t\tObject Details: {self.object_details}"
         if self.object_UID:
-            object_string += "\n\t\tObject UID: {}".format(self.object_UID)
+            object_string += f"\n\t\tObject UID: {self.object_UID}"
         if self.object_type:
-            object_string += "\n\t\tObject Type: {}".format(self.object_type)
+            object_string += f"\n\t\tObject Type: {self.object_type}"
         return object_string
 
     @classmethod
@@ -390,14 +388,14 @@ class LDAP_Entity_Access_Request_Target(Access_Request_Target):
         super().__init__(xml_tag, target_id, TYPE_LDAP_ENTITY, region)
 
     def __str__(self):
-        return "{}/{}".format(self.ldap_entity_name, self.ldap_entity_dn)
+        return f"{self.ldap_entity_name}/{self.ldap_entity_dn}"
 
     def to_pretty_str(self):
         object_string = ""
         if self.ldap_entity_name:
-            object_string += "\n\t\tLDAP Entity Name: {}".format(self.ldap_entity_name)
+            object_string += f"\n\t\tLDAP Entity Name: {self.ldap_entity_name}"
         if self.ldap_entity_dn:
-            object_string += "\n\t\tLDAP Entity DN: {}".format(self.ldap_entity_dn)
+            object_string += f"\n\t\tLDAP Entity DN: {self.ldap_entity_dn}"
         return object_string
 
     @classmethod
@@ -491,10 +489,10 @@ class Protocol_Service_Target(Service_Target):
         return cls(num_id, port, protocol, service_type)
 
     def to_pretty_str(self):
-        return "\n\t\tProtocol: {}\n\t\tPort: {}".format(self.protocol, self.port)
+        return f"\n\t\tProtocol: {self.protocol}\n\t\tPort: {self.port}"
 
     def __str__(self):
-        return "{} {}".format(self.protocol, self.port)
+        return f"{self.protocol} {self.port}"
 
 
 class ApplicationPredefinedServiceTarget(Service_Target):
@@ -521,10 +519,10 @@ class ApplicationPredefinedServiceTarget(Service_Target):
         return cls(service_id, application_name, services)
 
     def to_pretty_str(self):
-        return "\n\t\tPredefined Appliciation Name: {}".format(self.application_name)
+        return f"\n\t\tPredefined Appliciation Name: {self.application_name}"
 
     def __str__(self):
-        return "Predefined Appliciation {}".format(self.application_name)
+        return f"Predefined Appliciation {self.application_name}"
 
 
 class Predefined_Service_Target(Service_Target):
@@ -554,7 +552,7 @@ class Predefined_Service_Target(Service_Target):
         return self.predefined_name
 
     def to_pretty_str(self):
-        return "\n\t\tPredefined name: {}\n\t\t Protocol: {}".format(self.predefined_name, self.protocol)
+        return f"\n\t\tPredefined name: {self.predefined_name}\n\t\t Protocol: {self.protocol}"
 
 
 class Access_Request(XML_Object_Base):
@@ -634,9 +632,7 @@ class Access_Request(XML_Object_Base):
                    verifier_result, risk_analysis_result, ar_id, source_domain, destination_domain, use_topology)
 
     def to_pretty_str(self):
-        access_request_string = "Access Request {}:\n".format(self.order)
-
-        access_request_string += "\tTargets: "
+        access_request_string = f"Access Request {self.order}:\n" + "\tTargets: "
         for target in self.targets:
             access_request_string += target.to_pretty_str()
         access_request_string += "\n\tSources: "
@@ -657,8 +653,12 @@ class Access_Request(XML_Object_Base):
             for user in self.users:
                 access_request_string += user.to_pretty_str()
         if self.comment is not None:
-            access_request_string += "\n" + textwrap.fill("\tComment: {}".format(unescape(self.comment)),
-                                                          initial_indent='', subsequent_indent='\t\t ')
+            access_request_string += "\n" + textwrap.fill(
+                f"\tComment: {unescape(self.comment)}",
+                initial_indent='',
+                subsequent_indent='\t\t ',
+            )
+
         access_request_string += "\n"
         return access_request_string
 
@@ -679,7 +679,7 @@ class Access_Request(XML_Object_Base):
         sources = inline_delimiter.join(str(src) for src in self.sources if src)
         destinations = inline_delimiter.join(str(dst) for dst in self.destinations if dst)
         services = inline_delimiter.join(str(srv) for srv in self.services if srv)
-        action = self.action if self.action else ""
+        action = self.action or ""
         comment = '"{}"'.format(self.comment.replace("\n", "\\n").replace('"', "'")) if self.comment else ""
         if export_targets:
             targets = inline_delimiter.join(str(target) for target in self.targets if target)
@@ -770,7 +770,7 @@ class Step_Field_Multi_Access_Request(Step_Multi_Field_Base):
         return access_request_list[access_request_index]
 
     def get_next_access_request_order(self):
-        return "AR{}".format(len(self.access_requests) + 1)
+        return f"AR{len(self.access_requests) + 1}"
 
     def get_all_sources(self):
         return itertools.chain.from_iterable((ar.sources for ar in self.access_requests))
@@ -808,7 +808,7 @@ class Step_Field_Multi_Access_Request(Step_Multi_Field_Base):
 
         valid_risk_values = (Risk_Analysis_Result.HAS_RISK, Risk_Analysis_Result.MANUALLY_DISREGARDED, None)
         if risk not in valid_risk_values:
-            raise ValueError("'risk' param must be one of {}".format(valid_risk_values))
+            raise ValueError(f"'risk' param must be one of {valid_risk_values}")
 
         if risk is None:
             risk_funcs = (Risk_Analysis_Result.has_risk, Risk_Analysis_Result.is_manually_disregarded)
@@ -832,7 +832,7 @@ class Step_Field_Multi_Access_Request(Step_Multi_Field_Base):
         url_parse = requests.utils.urlparse(designer_result_url)
         url_path = url_parse.path
         if "multi_access_request" not in url_path:  # fix bug in SC API
-            url_path = "{}multi_access_request/designer".format(url_parse.path.split("fields")[0])
+            url_path = f'{url_parse.path.split("fields")[0]}multi_access_request/designer'
         try:
             url_helper = Secure_API_Helper(url_parse.netloc, (username, password))
             response_string = url_helper.get_uri(url_path, expected_status_codes=200).response.content
@@ -866,9 +866,9 @@ class Step_Field_Multi_Access_Request(Step_Multi_Field_Base):
         return cls(field_id, field_name, access_requests, designer_result, field_read_only)
 
     def to_pretty_str(self):
-        output = "Access request field '{}'\n:".format(self.name)
+        output = f"Access request field '{self.name}'\n:"
         for ar in self.access_requests:
-            output += "\n{}\n".format(ar.to_pretty_str())
+            output += f"\n{ar.to_pretty_str()}\n"
         return output
 
     def to_csv(self, *, delimiter=",", inline_delimiter=";", export_targets=False):

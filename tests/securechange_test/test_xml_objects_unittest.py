@@ -9,7 +9,10 @@ from pytos.securechange.xml_objects.securechange_api import Ticket_Info
 def fake_request_response(rest_file):
     full_path = os.path.dirname(os.path.abspath(__file__))
     sub_resources_dir = sys._getframe(1).f_locals['self'].__class__.__name__.lower()
-    resource_file = os.path.join(full_path, "resources", sub_resources_dir, "{}.xml".format(rest_file))
+    resource_file = os.path.join(
+        full_path, "resources", sub_resources_dir, f"{rest_file}.xml"
+    )
+
     with open(resource_file, mode='rb') as f:
         return f.read()
 

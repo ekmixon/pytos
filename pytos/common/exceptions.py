@@ -109,10 +109,13 @@ class REST_HTTP_Exception(Exception):
         super().__init__(message, status_code, expected_status_code)
 
     def __str__(self):
-        exception_string = "\nStatus code: {}\n".format(self.status_code)
-        exception_string += "Status: '{}'\n".format(self.status_description)
-        exception_string += "Expected status code: {}\n".format(self.expected_status_code)
-        exception_string += "Message: '{}'\n".format(self.message)
+        exception_string = (
+            f"\nStatus code: {self.status_code}\n"
+            + f"Status: '{self.status_description}'\n"
+        )
+
+        exception_string += f"Expected status code: {self.expected_status_code}\n"
+        exception_string += f"Message: '{self.message}'\n"
         return exception_string
 
     @staticmethod
@@ -156,7 +159,7 @@ class REST_HTTP_Exception(Exception):
             exception_class = REST_Gateway_Timeout_Error
 
         else:
-            raise ValueError("Exception for status code {} not implemented.".format(http_response))
+            raise ValueError(f"Exception for status code {http_response} not implemented.")
         return exception_class(error_message, expected_status_codes)
 
 

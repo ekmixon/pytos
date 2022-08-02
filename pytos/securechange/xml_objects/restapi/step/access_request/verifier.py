@@ -16,16 +16,10 @@ class Analysis_Result(XML_Object_Base):
         super().__init__(xml_tag)
 
     def is_not_run(self):
-        if self.status == Analysis_Result.NOT_RUN:
-            return True
-        else:
-            return False
+        return self.status == Analysis_Result.NOT_RUN
 
     def is_not_available(self):
-        if self.status == Analysis_Result.NOT_AVAILABLE:
-            return True
-        else:
-            return False
+        return self.status == Analysis_Result.NOT_AVAILABLE
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -115,27 +109,41 @@ class VerifierTarget(XML_Object_Base):
         super().__init__(Elements.VERIFIER_TARGET)
 
     def to_pretty_str(self):
-        verifier_string = "Managment name: {}\n".format(self.management_name)
-        verifier_string += "Revision Number: {}\n".format(self.revision_number)
-        verifier_string += "Date: {}\n".format(self.date)
-        verifier_string += "Administrator: {}\n".format(self.administrator)
-        verifier_string += "Status: {}\n".format(self.verification_status)
+        verifier_string = (
+            f"Managment name: {self.management_name}\n"
+            + f"Revision Number: {self.revision_number}\n"
+        )
+
+        verifier_string += f"Date: {self.date}\n"
+        verifier_string += f"Administrator: {self.administrator}\n"
+        verifier_string += f"Status: {self.verification_status}\n"
         verifier_string += "\n\n"
         for verifier_binding in self.verifier_bindings:
             for element, value in verifier_binding.binding.__dict__.items():
                 if element.startswith('_'):
                     continue
-                verifier_string += "{}: {}\n\n".format(element.capitalize(), value)
+                verifier_string += f"{element.capitalize()}: {value}\n\n"
 
             percent = verifier_binding.percent_implemented
-            stat = "Implemented ({}%)\n\n".format(percent) if percent else "Not Implemented ({}%)\n\n".format(percent)
-            verifier_string += "Status: {}".format(stat)
+            stat = (
+                f"Implemented ({percent}%)\n\n"
+                if percent
+                else f"Not Implemented ({percent}%)\n\n"
+            )
+
+            verifier_string += f"Status: {stat}"
 
             verifier_string += "Violating Rules: "
             violating_rule_string = ''
             for violating_rule in verifier_binding.violating_rules:
-                violating_rule_string += "\n\tSources: {}".format(violating_rule.src_networks.display_name)
-                violating_rule_string += "\n\tDestinations: {}".format(violating_rule.dst_networks.display_name)
+                violating_rule_string += (
+                    f"\n\tSources: {violating_rule.src_networks.display_name}"
+                )
+
+                violating_rule_string += (
+                    f"\n\tDestinations: {violating_rule.dst_networks.display_name}"
+                )
+
             if not violating_rule_string:
                 msg = "The queried traffic is handled by the implicit cleanup rule."
                 verifier_string += "---" if self.verification_status.lower() == "implemented" else msg
@@ -146,15 +154,15 @@ class VerifierTarget(XML_Object_Base):
             verifier_string += "Implementing Rules: "
             implementing_rule_string = ''
             for implementing_rule in verifier_binding.implementing_rules:
-                implementing_rule_string += "\n\tSources: {}/{}".format(implementing_rule.src_networks.ip,
-                                                                        implementing_rule.src_networks.subnet_mask)
-                implementing_rule_string += "\n\tDestinations: {}/{}".format(implementing_rule.dst_networks.ip,
-                                                                             implementing_rule.dst_networks.subnet_mask)
-                implementing_rule_string += "\n\tServices: {}".format(implementing_rule.dst_service.name)
-            if not implementing_rule_string:
-                verifier_string += "--------"
-            else:
-                verifier_string += implementing_rule_string
+                implementing_rule_string += f"\n\tSources: {implementing_rule.src_networks.ip}/{implementing_rule.src_networks.subnet_mask}"
+
+                implementing_rule_string += f"\n\tDestinations: {implementing_rule.dst_networks.ip}/{implementing_rule.dst_networks.subnet_mask}"
+
+                implementing_rule_string += (
+                    f"\n\tServices: {implementing_rule.dst_service.name}"
+                )
+
+            verifier_string += implementing_rule_string or "--------"
             verifier_string += "\n\n-----------------------------------------------------------\n\n\n"
         verifier_string += "\n"
         return verifier_string
@@ -229,14 +237,14 @@ class SlimRuleObject(XML_Object_Base):
 
     @staticmethod
     def get_obj(cls, xml_node, element):
-        logger.debug("Findign the element '{}' in the XML".format(element))
+        logger.debug(f"Findign the element '{element}' in the XML")
         node = get_xml_node(xml_node, element, True)
-        logger.debug("The node '{}' was found".format(node))
-        if node is None:
-            obj = Flat_XML_Object_Base(element)
-        else:
-            obj = cls.from_xml_node(node)
-        return obj
+        logger.debug(f"The node '{node}' was found")
+        return (
+            Flat_XML_Object_Base(element)
+            if node is None
+            else cls.from_xml_node(node)
+        )
 
 
 class ImplementingRule(SlimRuleObject):

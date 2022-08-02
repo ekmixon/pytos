@@ -19,7 +19,9 @@ class Step_Field_Base(XML_Object_Base):
         try:
             return self._attribs[xml_tags.Attributes.XSI_TYPE]
         except KeyError:
-            raise KeyError("Could not find type attribute, existing attributes: {}".format(self._attribs))
+            raise KeyError(
+                f"Could not find type attribute, existing attributes: {self._attribs}"
+            )
 
     def get_field_value(self):
         """
@@ -27,20 +29,21 @@ class Step_Field_Base(XML_Object_Base):
         If the field type contains more than one content attribute, the output will be a dictionary.
         """
         attribute_names = self.__class__.FIELD_CONTENT_ATTRIBUTES
-        if isinstance(attribute_names, list):
-            values_dict = {}
-            for attribute_name in attribute_names:
-                attribute_value = self.__dict__.get(attribute_name)
-                if isinstance(attribute_value, str):
-                    values_dict[attribute_name] = xml.sax.saxutils.unescape(attribute_value)
-                else:
-                    values_dict[attribute_name] = attribute_value
-            return values_dict
-        else:
-            if isinstance(self.__dict__[attribute_names], str):
-                return xml.sax.saxutils.unescape(self.__dict__.get(attribute_names))
+        if not isinstance(attribute_names, list):
+            return (
+                xml.sax.saxutils.unescape(self.__dict__.get(attribute_names))
+                if isinstance(self.__dict__[attribute_names], str)
+                else self.__dict__.get(attribute_names)
+            )
+
+        values_dict = {}
+        for attribute_name in attribute_names:
+            attribute_value = self.__dict__.get(attribute_name)
+            if isinstance(attribute_value, str):
+                values_dict[attribute_name] = xml.sax.saxutils.unescape(attribute_value)
             else:
-                return self.__dict__.get(attribute_names)
+                values_dict[attribute_name] = attribute_value
+        return values_dict
 
     def set_field_value(self, value):
         """
@@ -53,30 +56,31 @@ class Step_Field_Base(XML_Object_Base):
                 raise TypeError("For field types with more than one content attribute, value must be a dict.")
             for attribute_name in attribute_names:
                 try:
-                    if isinstance(value[attribute_name], str):
-                        self.__dict__[attribute_name] = xml.sax.saxutils.escape(value[attribute_name])
-                    else:
-                        self.__dict__[attribute_name] = value[attribute_name]
+                    self.__dict__[attribute_name] = (
+                        xml.sax.saxutils.escape(value[attribute_name])
+                        if isinstance(value[attribute_name], str)
+                        else value[attribute_name]
+                    )
+
                 except KeyError:
                     continue
+        elif isinstance(self.__dict__[attribute_names], str):
+            self.__dict__[attribute_names] = xml.sax.saxutils.escape(value)
         else:
-            if isinstance(self.__dict__[attribute_names], str):
-                self.__dict__[attribute_names] = xml.sax.saxutils.escape(value)
-            else:
-                self.__dict__[attribute_names] = value
+            self.__dict__[attribute_names] = value
 
     def from_xml_node(self, xml_node):
         raise NotImplementedError
 
     def __str__(self):
         field_value = self.get_field_value()
-        field_string = "{}:\n".format(self.name)
+        field_string = f"{self.name}:\n"
         if field_value:
             if isinstance(field_value, dict):
                 for key, value in field_value.items():
-                    field_string += "\t{}: {}\n".format(key, value)
+                    field_string += f"\t{key}: {value}\n"
             else:
-                field_string = "{}: {}\n".format(self.name, field_value)
+                field_string = f"{self.name}: {field_value}\n"
         return field_string
 
 
@@ -111,48 +115,45 @@ class Step_Multi_Field_Base(Step_Field_Base):
                 else:
                     value_dict[key] = value
             super().set_field_value(value_dict)
+        elif isinstance(values, XML_List):
+            super().set_field_value(values)
         else:
-            if isinstance(values, XML_List):
-                super().set_field_value(values)
-            else:
-                escaped_values = []
-                for value in values:
-                    if isinstance(value, str):
-                        escaped_values.append(xml.sax.saxutils.escape(value))
-                    else:
-                        escaped_values.append(value)
-                super().set_field_value(escaped_values)
+            escaped_values = []
+            for value in values:
+                if isinstance(value, str):
+                    escaped_values.append(xml.sax.saxutils.escape(value))
+                else:
+                    escaped_values.append(value)
+            super().set_field_value(escaped_values)
 
     def get_field_value(self):
         attribute_names = self.__class__.FIELD_CONTENT_ATTRIBUTES
         if isinstance(attribute_names, list):
-            value_dict = {}
-            for key, value in super().get_field_value().items():
-                if isinstance(value, str):
-                    value_dict[key] = xml.sax.saxutils.escape(value)
-                else:
-                    value_dict[key] = value
-            return value_dict
-        else:
-            unescaped_values = []
-            field_value = super().get_field_value()
-            try:
-                if isinstance(field_value, XML_List):
-                    return field_value
-                else:
-                    for item in super().get_field_value():
-                        if isinstance(item, str):
-                            unescaped_values.append(xml.sax.saxutils.unescape(item))
-                        else:
-                            unescaped_values.append(item)
-            except TypeError:
+            return {
+                key: xml.sax.saxutils.escape(value)
+                if isinstance(value, str)
+                else value
+                for key, value in super().get_field_value().items()
+            }
+
+        unescaped_values = []
+        field_value = super().get_field_value()
+        try:
+            if isinstance(field_value, XML_List):
                 return field_value
-            else:
-                return unescaped_values
+            for item in super().get_field_value():
+                if isinstance(item, str):
+                    unescaped_values.append(xml.sax.saxutils.unescape(item))
+                else:
+                    unescaped_values.append(item)
+        except TypeError:
+            return field_value
+        else:
+            return unescaped_values
 
     def __str__(self):
         field_values = []
-        field_string = "{}: \n".format(self.name)
+        field_string = f"{self.name}: \n"
         try:
             for value in self.get_field_value():
                 try:
@@ -164,7 +165,7 @@ class Step_Multi_Field_Base(Step_Field_Base):
             pass
         field_values = [value for value in field_values if value]
         for index, value in enumerate(field_values):
-            field_string += "\t{}. {}\n".format(index + 1, value)
+            field_string += f"\t{index + 1}. {value}\n"
         return field_string
 
 

@@ -14,16 +14,10 @@ class Analysis_Result(XML_Object_Base):
         super().__init__(xml_tag)
 
     def is_not_run(self):
-        if self.status == Analysis_Result.NOT_RUN:
-            return True
-        else:
-            return False
+        return self.status == Analysis_Result.NOT_RUN
 
     def is_not_available(self):
-        if self.status == Analysis_Result.NOT_AVAILABLE:
-            return True
-        else:
-            return False
+        return self.status == Analysis_Result.NOT_AVAILABLE
 
     @classmethod
     def from_xml_node(cls, xml_node):

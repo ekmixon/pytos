@@ -119,7 +119,7 @@ class Network_Object(Base_Object, metaclass=SubclassWithIdentifierRegistry):
         try:
             return cls.registry[network_object_type].from_xml_node(xml_node)
         except KeyError:
-            raise ValueError("Unknown network object type {}".format(network_object_type))
+            raise ValueError(f"Unknown network object type {network_object_type}")
 
     @classmethod
     def from_st_network_object(cls, st_network_obj):
@@ -150,4 +150,4 @@ class Service_Object(Base_Object, metaclass=SubclassWithIdentifierRegistry):
         try:
             return cls.registry[service_type].from_xml_node(xml_node)
         except KeyError:
-            raise ValueError("Unknown network object type {}".format(service_type))
+            raise ValueError(f"Unknown network object type {service_type}")

@@ -70,10 +70,13 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         logger.info("Getting SecureApp users with ID '%s'.", user_id)
         try:
-            response_string = self.get_uri("/securechangeworkflow/api/secureapp/repository/users/{}".format(user_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securechangeworkflow/api/secureapp/repository/users/{user_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "User with ID '{}' does not exist.".format(user_id)
+            message = f"User with ID '{user_id}' does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
@@ -97,7 +100,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         for user in self._user_list:
             if user.name == user_name:
                 return user
-        message = "An user with the name '{}' does not exist.".format(user_name)
+        message = f"An user with the name '{user_name}' does not exist."
         logger.critical(message)
         raise ValueError(message)
 
@@ -114,19 +117,23 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
 
         if app_domain:
-            log_msg = "Getting SecureApp application with name '{}' and domain name '{}'.".format(app_name, app_domain)
+            log_msg = f"Getting SecureApp application with name '{app_name}' and domain name '{app_domain}'."
+
         else:
-            log_msg = "Getting SecureApp application with name '{}'.".format(app_name)
+            log_msg = f"Getting SecureApp application with name '{app_name}'."
         logger.info(log_msg)
         try:
-            response_string = self.get_uri("/securechangeworkflow/api/secureapp/repository/applications?name={}".format(app_name),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securechangeworkflow/api/secureapp/repository/applications?name={app_name}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
             message = "Failed to GET SecureApp application list"
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "An application with the name '{}' does not exist.".format(app_name)
+            message = f"An application with the name '{app_name}' does not exist."
             logger.critical(message)
             raise ValueError(message)
 
@@ -141,7 +148,7 @@ class Secure_App_Helper(Secure_Change_Helper):
             else:
                 return [app for app in found_apps if app.name == app_name][0]
         except IndexError:
-            message = "An application with the name '{}' does not exist.".format(app_name)
+            message = f"An application with the name '{app_name}' does not exist."
             logger.critical(message)
             raise ValueError(message)
 
@@ -157,10 +164,12 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Getting SecureApp application with ID '%s'.", app_id)
         try:
             response_string = self.get_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}".format(app_id),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Application with ID {} does nto exist".format(app_id)
+            message = f"Application with ID {app_id} does nto exist"
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
@@ -200,13 +209,11 @@ class Secure_App_Helper(Secure_Change_Helper):
         :rtype:Applications_List
         :raise IOError: If there was a communication error.
         """
-        if not user_id:
-            log_user_id = "used for API call"
-        else:
-            log_user_id = user_id
-        logger.info("Getting SecureApp applications list where user {} is owner({}) and editor({}).".format(
-            log_user_id, owner, editor
-        ))
+        log_user_id = user_id or "used for API call"
+        logger.info(
+            f"Getting SecureApp applications list where user {log_user_id} is owner({owner}) and editor({editor})."
+        )
+
         filter_params = []
         if owner:
             filter_params.append("app_owner")
@@ -214,14 +221,17 @@ class Secure_App_Helper(Secure_Change_Helper):
             filter_params.append("app_editor")
         if filter_params:
             params = ",".join(filter_params)
-            query_filter = "?app_permissions={}".format(params)
+            query_filter = f"?app_permissions={params}"
             if user_id:
-                query_filter += "&userId={}".format(user_id)
+                query_filter += f"&userId={user_id}"
         else:
             query_filter = ""
         try:
-            response_string = self.get_uri("/securechangeworkflow/api/secureapp/repository/applications{}".format(
-                query_filter), expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securechangeworkflow/api/secureapp/repository/applications{query_filter}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
             message = "Failed to GET SecureApp application list"
             logger.critical(message)
@@ -241,7 +251,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         url = "/securechangeworkflow/api/secureapp/repository/services"
 
         if param_builder:
-            url = "{}{}".format(url, param_builder.build())
+            url = f"{url}{param_builder.build()}"
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except RequestException:
@@ -256,10 +266,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         :rtype:Services_List
         :raise IOError: If there was a communication error.
         """
-        if global_service_only:
-            param_dict = {'globals_only': True}
-        else:
-            param_dict = {}
+        param_dict = {'globals_only': True} if global_service_only else {}
         param_builder = URLParamBuilderDict(param_dict)
         self._service_list = self.get_services_list(param_builder)
         return self._service_list
@@ -314,10 +321,13 @@ class Secure_App_Helper(Secure_Change_Helper):
         if not app_id:
             app_id = self.get_app_by_name(app_name).id
         if service_name:
-            service_info = "with name '{}'".format(service_name)
+            service_info = f"with name '{service_name}'"
         else:
-            service_info = "with ID {}".format(service_id)
-        logger.info("Searching for services {} for application with ID {}".format(service_info, app_id))
+            service_info = f"with ID {service_id}"
+        logger.info(
+            f"Searching for services {service_info} for application with ID {app_id}"
+        )
+
         available_services = self.get_service_list_available_for_app(app_id, app_name, include_global)
 
         if service_name:
@@ -356,7 +366,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         try:
             return [service for service in self.get_all_services() if str(service.id) == str(service_id)][0]
         except IndexError:
-            message = "Service with ID {} does not exist.".format(service_id)
+            message = f"Service with ID {service_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
 
@@ -379,7 +389,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         try:
             return self.get_services_list(param_builder)[0]
         except (IndexError, REST_Not_Found_Error):
-            message = "A service with the name '{}' does not exist.".format(service_name)
+            message = f"A service with the name '{service_name}' does not exist."
             logger.critical(message)
             raise ValueError(message)
 
@@ -395,10 +405,13 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Getting SecureApp service list for application with ID %s", app_id)
         try:
             response_string = self.get_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/services".format(app_id),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/services",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get SecureApp services list for application with ID {}".format(app_id)
+            message = f"Failed to get SecureApp services list for application with ID {app_id}"
+
             logger.critical(message)
             raise IOError(message)
         return Services_List.from_xml_string(response_string)
@@ -429,14 +442,17 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Getting SecureApp connections list for application with ID '%s'.", app_id)
         try:
             response_string = self.get_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/connections".format(app_id),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
             message = "Application with ID {0} does not exist.".format(app_id)
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to get SecureApp connections list for application with ID {}.".format(app_id)
+            message = f"Failed to get SecureApp connections list for application with ID {app_id}."
+
             logger.critical(message)
             raise IOError(message)
         return Connection_List.from_xml_string(response_string)
@@ -446,17 +462,23 @@ class Secure_App_Helper(Secure_Change_Helper):
         Get extended connections (with all information)
         :return:
         """
-        logger.info("Getting SecureApp connections with details for application with ID {}".format(app_id))
+        logger.info(
+            f"Getting SecureApp connections with details for application with ID {app_id}"
+        )
+
         try:
             response_string = self.get_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/connections_extended".format(app_id),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections_extended",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
             msg = "Application with ID does not exists".format(app_id)
             logger.critical(msg)
             raise ValueError(msg)
         except RequestException:
-            msg = "Failed to get SecureApp connections list for application with ID {}".format(app_id)
+            msg = f"Failed to get SecureApp connections list for application with ID {app_id}"
+
             logger.critical(msg)
             raise IOError(msg)
         return ConnectionExtendedList.from_xml_string(response_string)
@@ -492,9 +514,8 @@ class Secure_App_Helper(Secure_Change_Helper):
         for connection in connection_list:
             if connection.name.lower() == connection_name.lower():
                 return connection
-        message = "A connection with the name '{}' does not exist in application with ID {}.".format(
-            connection_name,
-            app_id)
+        message = f"A connection with the name '{connection_name}' does not exist in application with ID {app_id}."
+
         logger.critical(message)
         raise ValueError(message)
 
@@ -525,17 +546,21 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         logger.info("Getting Network objects list for SecureApp application '%s'.", app_id)
         try:
-            response_string = self.get_uri("/securechangeworkflow/api/secureapp/repository"
-                                           "/applications/{}/network_objects".format(app_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/network_objects",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to GET network objects list for SecureApp application with id '{}'".format(app_id)
+            message = f"Failed to GET network objects list for SecureApp application with id '{app_id}'"
+
             logger.critical(message)
             raise IOError(message)
         try:
             network_objects_list = Network_Objects_List.from_xml_string(response_string)
         except (ValueError, AttributeError):
-            message = "Failed to get network objects list for application with id '{}'".format(app_id)
+            message = f"Failed to get network objects list for application with id '{app_id}'"
+
             logger.critical(message)
             raise ValueError(message)
         return network_objects_list
@@ -595,22 +620,25 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Getting network object '%s'.", network_object_name)
         try:
             response_string = self.get_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/network_objects".format(app_id),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/network_objects",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Application with ID '{}' does not exist.".format(app_id)
+            message = f"Application with ID '{app_id}' does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET SecureApp network objects list for application with ID {}.".format(app_id)
+            message = f"Failed to GET SecureApp network objects list for application with ID {app_id}."
+
             logger.critical(message)
             raise IOError(message)
 
         for network_object in Network_Objects_List.from_xml_string(response_string):
             if network_object.name == network_object_name:
                 return network_object
-        message = "Could not find network object with name '{}' for application with ID {}.".format(network_object_name,
-                                                                                                    app_id)
+        message = f"Could not find network object with name '{network_object_name}' for application with ID {app_id}."
+
         logger.critical(message)
         raise ValueError(message)
 
@@ -632,22 +660,25 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Getting network object with id '%s'.", network_object_id)
         try:
             response_string = self.get_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/network_objects".format(app_id),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/network_objects",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Application with ID '{}' does not exist.".format(app_id)
+            message = f"Application with ID '{app_id}' does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET SecureApp network objects list for application with ID {}.".format(app_id)
+            message = f"Failed to GET SecureApp network objects list for application with ID {app_id}."
+
             logger.critical(message)
             raise IOError(message)
 
         for network_object in Network_Objects_List.from_xml_string(response_string):
             if network_object.id == network_object_id:
                 return network_object
-        message = "Could not find network object with id '{}' for application with ID {}.".format(network_object_id,
-                                                                                                  app_id)
+        message = f"Could not find network object with id '{network_object_id}' for application with ID {app_id}."
+
         logger.critical(message)
         raise ValueError(message)
 
@@ -665,14 +696,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Creating SecureApp applications.")
         app_list = Applications_List([])
         # Handle a list of apps
-        if isinstance(apps, list):
-            app_list.extend(apps)
-            expected_status_code = [200, 201]
-            if len(apps) == 0:
-                message = "The list of applications to create is empty."
-                logger.critical(message)
-                raise ValueError(message)
-        elif isinstance(apps, Applications_List):
+        if isinstance(apps, (list, Applications_List)):
             app_list.extend(apps)
             expected_status_code = [200, 201]
             if len(apps) == 0:
@@ -684,24 +708,21 @@ class Secure_App_Helper(Secure_Change_Helper):
             expected_status_code = 201
         else:
             message = "The provided parameter must be a list of applications, " \
-                      "Secure_App.XML_Objects.REST.Applications_List, or Application"
+                          "Secure_App.XML_Objects.REST.Applications_List, or Application"
             logger.critical(message)
             raise ValueError(message)
         try:
             response = self.post_uri("/securechangeworkflow/api/secureapp/repository/applications/",
                                      app_list.to_xml_string().encode(), expected_status_codes=expected_status_code)
-            if expected_status_code == 201:
-                app_id = response.get_created_item_id()
-                return app_id
-            return True
+            return response.get_created_item_id() if expected_status_code == 201 else True
         except RequestException as error:
-            message = "Could not create the following applications: '{}', error was '{}'.".format(
-                [app.name for app in app_list], error)
+            message = f"Could not create the following applications: '{[app.name for app in app_list]}', error was '{error}'."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not create the following applications: '{}', error was '{}'.".format(
-                [app.name for app in app_list], error)
+            message = f"Could not create the following applications: '{[app.name for app in app_list]}', error was '{error}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -720,13 +741,7 @@ class Secure_App_Helper(Secure_Change_Helper):
         app_list = Applications_List([])
         expected_status_code = [200, 201]
         # Handle a list of apps
-        if isinstance(apps, list):
-            app_list.extend(apps)
-            if len(apps) == 0:
-                message = "The list of applications to update is empty."
-                logger.critical(message)
-                raise ValueError(message)
-        elif isinstance(apps, Applications_List):
+        if isinstance(apps, (list, Applications_List)):
             app_list.extend(apps)
             if len(apps) == 0:
                 message = "The list of applications to update is empty."
@@ -736,7 +751,7 @@ class Secure_App_Helper(Secure_Change_Helper):
             app_list.append(apps)
         else:
             message = "The provided parameter must be a list of applications, " \
-                      "Secure_App.XML_Objects.REST.Applications_List, or Application"
+                          "Secure_App.XML_Objects.REST.Applications_List, or Application"
             logger.critical(message)
             raise ValueError(message)
         # BUG: around for current bug that will return 200 if id is not specified but application will not be updated
@@ -745,7 +760,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 try:
                     app.id = self.get_app_by_name(app.name, customer_name).id
                 except (ValueError, AttributeError, IOError):
-                    message = "Failed to get id for application '{}'.".format(app.name)
+                    message = f"Failed to get id for application '{app.name}'."
                     logger.critical(message)
                     raise ValueError(message)
         try:
@@ -753,13 +768,13 @@ class Secure_App_Helper(Secure_Change_Helper):
                          app_list.to_xml_string().encode(), expected_status_codes=expected_status_code)
             return True
         except RequestException as error:
-            message = "Could not update the following applications: '{}', error was '{}'.".format(
-                [app.name for app in app_list], error)
+            message = f"Could not update the following applications: '{[app.name for app in app_list]}', error was '{error}'."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not update the following applications: '{}', error was '{}'.".format(
-                [app.name for app in app_list], error)
+            message = f"Could not update the following applications: '{[app.name for app in app_list]}', error was '{error}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -778,56 +793,61 @@ class Secure_App_Helper(Secure_Change_Helper):
         if isinstance(apps, list):
             if len(apps) == 0:
                 raise ValueError("The list of applications to delete is empty.")
-            else:
-                for app in apps:
-                    try:
-                        self.delete_uri("/securechangeworkflow/api/secureapp/repository/applications/{}".format(app.id),
-                                        expected_status_codes=200)
-                    except REST_Client_Error as error:
-                        message = "Could not delete the following applications: '{}', error was '{}'.".format(
-                            [app.name for app in apps], error)
-                        logger.critical(message)
-                        raise ValueError(message)
-                    except RequestException as error:
-                        message = "Could not delete the following applications: '{}', error was '{}'.".format(
-                            [app.name for app in apps], error)
-                        logger.critical(message)
-                        raise IOError(message)
-                return True
-        # Handle Applications_List
+            for app in apps:
+                try:
+                    self.delete_uri(
+                        f"/securechangeworkflow/api/secureapp/repository/applications/{app.id}",
+                        expected_status_codes=200,
+                    )
+
+                except REST_Client_Error as error:
+                    message = f"Could not delete the following applications: '{[app.name for app in apps]}', error was '{error}'."
+
+                    logger.critical(message)
+                    raise ValueError(message)
+                except RequestException as error:
+                    message = f"Could not delete the following applications: '{[app.name for app in apps]}', error was '{error}'."
+
+                    logger.critical(message)
+                    raise IOError(message)
+            return True
         elif isinstance(apps, Applications_List):
             if len(apps) == 0:
                 raise ValueError("The applications list to delete is empty.")
-            else:
-                for app in apps:
-                    try:
-                        self.delete_uri("/securechangeworkflow/api/secureapp/repository/applications/{}".format(app.id),
-                                        expected_status_codes=200)
-                    except REST_Client_Error as error:
-                        message = "Could not delete the following applications: '{}', error was '{}'.".format(
-                            [app.name for app in apps], error)
-                        logger.critical(message)
-                        raise ValueError(message)
-                    except RequestException as error:
-                        message = "Could not delete the following applications: '{}', error was '{}'.".format(
-                            [app.name for app in apps], error)
-                        logger.critical(message)
-                        raise IOError(message)
-                return True
-        # Handle Application
+            for app in apps:
+                try:
+                    self.delete_uri(
+                        f"/securechangeworkflow/api/secureapp/repository/applications/{app.id}",
+                        expected_status_codes=200,
+                    )
+
+                except REST_Client_Error as error:
+                    message = f"Could not delete the following applications: '{[app.name for app in apps]}', error was '{error}'."
+
+                    logger.critical(message)
+                    raise ValueError(message)
+                except RequestException as error:
+                    message = f"Could not delete the following applications: '{[app.name for app in apps]}', error was '{error}'."
+
+                    logger.critical(message)
+                    raise IOError(message)
+            return True
         elif isinstance(apps, Application):
             try:
-                self.delete_uri("/securechangeworkflow/api/secureapp/repository/applications/{}".format(apps.id),
-                                expected_status_codes=200)
+                self.delete_uri(
+                    f"/securechangeworkflow/api/secureapp/repository/applications/{apps.id}",
+                    expected_status_codes=200,
+                )
+
                 return True
             except REST_Client_Error as error:
-                message = "Could not delete the following application: '{}', error was '{}'.".format(
-                    apps.name, error)
+                message = f"Could not delete the following application: '{apps.name}', error was '{error}'."
+
                 logger.critical(message)
                 raise ValueError(message)
             except RequestException as error:
-                message = "Could not delete the following application: '{}', error was '{}'.".format(
-                    apps.name, error)
+                message = f"Could not delete the following application: '{apps.name}', error was '{error}'."
+
                 logger.critical(message)
                 raise IOError(message)
         else:
@@ -847,14 +867,19 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         logger.info("Deleting application with ID '%s' from SecureApp.", app_id)
         try:
-            self.delete_uri("/securechangeworkflow/api/secureapp/repository/applications/{}".format(app_id),
-                            expected_status_codes=200)
+            self.delete_uri(
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}",
+                expected_status_codes=200,
+            )
+
         except REST_Client_Error as error:
-            message = "Could not delete application with ID : '{}', error was '{}'.".format(app_id, error)
+            message = f"Could not delete application with ID : '{app_id}', error was '{error}'."
+
             logger.critical(message)
             raise ValueError(message)
         except RequestException as error:
-            message = "Could not delete application with ID : '{}', error was '{}'.".format(app_id, error)
+            message = f"Could not delete application with ID : '{app_id}', error was '{error}'."
+
             logger.critical(message)
             raise IOError(message)
         return True
@@ -881,7 +906,8 @@ class Secure_App_Helper(Secure_Change_Helper):
             try:
                 self.delete_app_by_id(app.id)
             except (RequestException, ValueError) as delete_error:
-                message = "Could not delete application with ID : '{}', error was '{}'.".format(app.id, delete_error)
+                message = f"Could not delete application with ID : '{app.id}', error was '{delete_error}'."
+
                 logger.critical(message)
                 raise IOError(message)
 
@@ -908,10 +934,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 users_list.extend(users_list)
-                if len(users) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(users) == 1 else 200
         elif isinstance(users, User_List):
             if len(users) == 0:
                 message = "The list of users to create is empty."
@@ -919,10 +942,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 users_list.extend(users)
-                if len(users) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(users) == 1 else 200
         elif isinstance(users, User):
             users_list.append(users)
             expected_status_code = 201
@@ -933,18 +953,15 @@ class Secure_App_Helper(Secure_Change_Helper):
         try:
             response = self.post_uri("/securechangeworkflow/api/secureapp/repository/users/",
                                      users_list.to_xml_string().encode(), expected_status_codes=expected_status_code)
-            if expected_status_code == 201:
-                user_id = response.get_created_item_id()
-                return user_id
-            return None
+            return response.get_created_item_id() if expected_status_code == 201 else None
         except RequestException as error:
-            message = "Could not create the following users: '{}', error was '{}'.".format(
-                [user.name for user in users_list], error)
+            message = f"Could not create the following users: '{[user.name for user in users_list]}', error was '{error}'."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not create the following users: '{}', error was '{}'.".format(
-                [user.name for user in users_list], error)
+            message = f"Could not create the following users: '{[user.name for user in users_list]}', error was '{error}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -960,14 +977,17 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         logger.info("Deleting user with ID '%s' from SecureApp.", user_id)
         try:
-            self.delete_uri("/securechangeworkflow/api/secureapp/repository/users/{}".format(user_id),
-                            expected_status_codes=200)
+            self.delete_uri(
+                f"/securechangeworkflow/api/secureapp/repository/users/{user_id}",
+                expected_status_codes=200,
+            )
+
         except REST_Client_Error as error:
-            message = "Could not delete user with ID {}, error was '{}'.".format(user_id, error)
+            message = f"Could not delete user with ID {user_id}, error was '{error}'."
             logger.critical(message)
             raise ValueError(message)
         except RequestException as error:
-            message = "Could not delete user with ID {}, error was '{}'.".format(user_id, error)
+            message = f"Could not delete user with ID {user_id}, error was '{error}'."
             logger.critical(message)
             raise IOError(message)
         return True
@@ -1005,12 +1025,14 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         info = "Creating SecureApp services"
         if app_id:
-            info += " for application with ID {}".format(app_id)
-            url = "/securechangeworkflow/api/secureapp/repository/applications/{}/services".format(app_id)
+            info += f" for application with ID {app_id}"
+            url = f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/services"
+
         elif app_name:
-            info += " for application '{}'".format(app_name)
+            info += f" for application '{app_name}'"
             app_id = self.get_app_by_name(app_name).id
-            url = "/securechangeworkflow/api/secureapp/repository/applications/{}/services".format(app_id)
+            url = f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/services"
+
         else:
             info += "."
             url = "/securechangeworkflow/api/secureapp/repository/services/"
@@ -1024,10 +1046,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 services_list.extend(services)
-                if len(services) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(services) == 1 else 200
         elif isinstance(services, Services_List):
             if len(services) == 0:
                 message = "The list of services to create is empty."
@@ -1035,10 +1054,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 services_list.extend(services)
-                if len(services) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(services) == 1 else 200
         elif isinstance(services, (Single_Service, Group_Service)):
             services_list.append(services)
             expected_status_code = 201
@@ -1050,18 +1066,15 @@ class Secure_App_Helper(Secure_Change_Helper):
             response = self.post_uri(url,
                                      services_list.to_xml_string().encode(),
                                      expected_status_codes=expected_status_code)
-            if expected_status_code == 201:
-                service_id = response.get_created_item_id()
-                return service_id
-            return True
+            return response.get_created_item_id() if expected_status_code == 201 else True
         except RequestException as error:
-            message = "Could not create the following services: '{}', error was '{}'".format(
-                [service.name for service in services_list], error)
+            message = f"Could not create the following services: '{[service.name for service in services_list]}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not create the following services: '{}', error was '{}'".format(
-                [service.name for service in services_list], error)
+            message = f"Could not create the following services: '{[service.name for service in services_list]}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1080,12 +1093,14 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         info = "Updating services for SecureApp"
         if app_id:
-            info += " for application with ID {}".format(app_id)
-            url = "/securechangeworkflow/api/secureapp/repository/applications/{}/services".format(app_id)
+            info += f" for application with ID {app_id}"
+            url = f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/services"
+
         elif app_name:
-            info += " for application '{}'".format(app_name)
+            info += f" for application '{app_name}'"
             app_id = self.get_app_by_name(app_name).id
-            url = "/securechangeworkflow/api/secureapp/repository/applications/{}/services".format(app_id)
+            url = f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/services"
+
         else:
             info += "."
             url = "/securechangeworkflow/api/secureapp/repository/services/"
@@ -1118,13 +1133,13 @@ class Secure_App_Helper(Secure_Change_Helper):
                          services_list.to_xml_string().encode(),
                          expected_status_codes=200)
         except RequestException as error:
-            message = "Could not update the following services: '{}', error was '{}'".format(
-                [service.name for service in services_list], error)
+            message = f"Could not update the following services: '{[service.name for service in services_list]}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not update the following services: '{}', error was '{}'".format(
-                [service.name for service in services_list], error)
+            message = f"Could not update the following services: '{[service.name for service in services_list]}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1140,14 +1155,19 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         logger.info("Deleting service with name '%s' from SecureApp.", service_name)
         try:
-            self.delete_uri("/securechangeworkflow/api/secureapp/repository/services?name={}".format(service_name),
-                            expected_status_codes=200)
+            self.delete_uri(
+                f"/securechangeworkflow/api/secureapp/repository/services?name={service_name}",
+                expected_status_codes=200,
+            )
+
         except RequestException as error:
-            message = "Could not delete the service: '{}', error was '{}'".format(service_name, error)
+            message = f"Could not delete the service: '{service_name}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not delete the service: '{}', error was '{}'".format(service_name, error)
+            message = f"Could not delete the service: '{service_name}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
         return True
@@ -1160,16 +1180,22 @@ class Secure_App_Helper(Secure_Change_Helper):
         :raise ValueError: If the specified service does not exist or there was another problem with the parameters.
         :raise IOError: If there was a communication error.
         """
-        logger.info("Deleting local service id '{}' for application id '{}'".format(app_id, service_id))
-        url = "/securechangeworkflow/api/secureapp/repository/applications/{}/services/{}".format(app_id, service_id)
+        logger.info(
+            f"Deleting local service id '{app_id}' for application id '{service_id}'"
+        )
+
+        url = f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/services/{service_id}"
+
         try:
             self.delete_uri(url, expected_status_codes=200)
         except RequestException as error:
-            message = "Could not delete service with ID: '{}', error was '{}'".format(service_id, error)
+            message = f"Could not delete service with ID: '{service_id}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not delete service with ID: '{}', error was '{}'".format(service_id, error)
+            message = f"Could not delete service with ID: '{service_id}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
         return True
@@ -1186,14 +1212,19 @@ class Secure_App_Helper(Secure_Change_Helper):
         """
         logger.info("Deleting service with ID '%s' from SecureApp.", service_id)
         try:
-            self.delete_uri("/securechangeworkflow/api/secureapp/repository/services/{}".format(service_id),
-                            expected_status_codes=200)
+            self.delete_uri(
+                f"/securechangeworkflow/api/secureapp/repository/services/{service_id}",
+                expected_status_codes=200,
+            )
+
         except REST_Client_Error as error:
-            message = "Could not delete the service with ID '{}', error was '{}'".format(service_id, error)
+            message = f"Could not delete the service with ID '{service_id}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
         except RequestException as error:
-            message = "Could not delete the service with ID '{}', error was '{}'".format(service_id, error)
+            message = f"Could not delete the service with ID '{service_id}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         return True
@@ -1218,10 +1249,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 network_objects_list.extend(network_objects)
-                if len(network_objects) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(network_objects) == 1 else 200
         elif isinstance(network_objects, Network_Objects_List):
             if len(network_objects) == 0:
                 message = "The list of network objects to create is empty."
@@ -1229,10 +1257,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 network_objects_list.extend(network_objects)
-                if len(network_objects_list) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(network_objects_list) == 1 else 200
         elif isinstance(network_objects, (
                 Basic_Network_Object, Range_Network_Object,
                 Host_Network_Object, Subnet_Network_Object,
@@ -1249,18 +1274,15 @@ class Secure_App_Helper(Secure_Change_Helper):
             response = self.post_uri(
                 "/securechangeworkflow/api/secureapp/repository/applications/{0}/network_objects".format(app_id),
                 network_objects_list.to_xml_string().encode(), expected_status_codes=expected_status_code)
-            if expected_status_code == 201:
-                network_object_id = response.get_created_item_id()
-                return network_object_id
-            return True
+            return response.get_created_item_id() if expected_status_code == 201 else True
         except RequestException as error:
-            message = "Could not create the following network objects: '{}', error was '{}'".format(
-                [network_object.name for network_object in network_objects_list], error)
+            message = f"Could not create the following network objects: '{[network_object.name for network_object in network_objects_list]}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not create the following network objects: '{}', error was '{}'".format(
-                [network_object.name for network_object in network_objects_list], error)
+            message = f"Could not create the following network objects: '{[network_object.name for network_object in network_objects_list]}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1311,31 +1333,35 @@ class Secure_App_Helper(Secure_Change_Helper):
                 try:
                     network_object.id = self.get_network_object_by_name_for_app_id(network_object.name, app_id)
                 except (ValueError, AttributeError, IOError):
-                    message = "Failed to get id for a network object '{}'".format(network_object.name)
+                    message = f"Failed to get id for a network object '{network_object.name}'"
                     logger.critical(message)
                     raise ValueError(message)
             elif not network_object.name:
                 try:
                     network_object.name = self.get_network_object_by_id_for_app_id(network_object.id, app_id)
                 except (ValueError, AttributeError, IOError):
-                    message = "Failed to get name for a network object with id '{}'".format(network_object.id)
+                    message = f"Failed to get name for a network object with id '{network_object.id}'"
+
                     logger.critical(message)
                     raise ValueError(message)
             else:
                 continue
         try:
             self.put_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/network_objects".format(app_id),
-                network_objects_list.to_xml_string().encode(), expected_status_codes=expected_status_code)
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/network_objects",
+                network_objects_list.to_xml_string().encode(),
+                expected_status_codes=expected_status_code,
+            )
+
             return True
         except RequestException as error:
-            message = "Could not create the following network objects: '{}', error was '{}'".format(
-                [network_object.name for network_object in network_objects_list], error)
+            message = f"Could not create the following network objects: '{[network_object.name for network_object in network_objects_list]}', error was '{error}'"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not create the following network objects: '{}', error was '{}'".format(
-                [network_object.name for network_object in network_objects_list], error)
+            message = f"Could not create the following network objects: '{[network_object.name for network_object in network_objects_list]}', error was '{error}'"
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1382,10 +1408,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 connection_list.extend(connections)
-                if len(connection_list) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(connection_list) == 1 else 200
         elif isinstance(connections, Connection_List):
             if len(connections) == 0:
                 message = "The list of network objects to create is empty."
@@ -1393,10 +1416,7 @@ class Secure_App_Helper(Secure_Change_Helper):
                 raise ValueError(message)
             else:
                 connection_list.extend(connections)
-                if len(connection_list) == 1:
-                    expected_status_code = 201
-                else:
-                    expected_status_code = 200
+                expected_status_code = 201 if len(connection_list) == 1 else 200
         elif isinstance(connections, Detailed_Application_Connection):
             connection_list.append(connections)
             expected_status_code = 201
@@ -1407,20 +1427,20 @@ class Secure_App_Helper(Secure_Change_Helper):
                 "Detailed_Application_Connection")
         try:
             response = self.post_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/connections".format(app_id),
-                connection_list.to_xml_string().encode(), expected_status_codes=expected_status_code)
-            if expected_status_code == 201:
-                connection_id = response.get_created_item_id()
-                return connection_id
-            return True
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections",
+                connection_list.to_xml_string().encode(),
+                expected_status_codes=expected_status_code,
+            )
+
+            return response.get_created_item_id() if expected_status_code == 201 else True
         except RequestException as error:
-            message = "Could not create the following connections: '{}', error was '{}'.".format(
-                [connection.name for connection in connection_list], error)
+            message = f"Could not create the following connections: '{[connection.name for connection in connection_list]}', error was '{error}'."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not create the following connections: '{}', error was '{}'.".format(
-                [connection.name for connection in connection_list], error)
+            message = f"Could not create the following connections: '{[connection.name for connection in connection_list]}', error was '{error}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1462,26 +1482,27 @@ class Secure_App_Helper(Secure_Change_Helper):
             logger.critical(msg)
             raise ValueError(msg)
         elif not connection.id:
-            logger.info("Updating connection '{}' "
-                        "for application with ID {}".format(connection.name,
-                                                            app_id))
+            logger.info(
+                f"Updating connection '{connection.name}' for application with ID {app_id}"
+            )
+
             connection.id = self.get_connection_by_name_for_app_id(app_id, connection.name).id
         else:
-            logger.info("Updating connection with ID {} "
-                        "for application with ID {}".format(connection.id,
-                                                            app_id))
+            logger.info(
+                f"Updating connection with ID {connection.id} for application with ID {app_id}"
+            )
+
 
         try:
             self.put_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/connections/{}".format(
-                    app_id,
-                    connection.id),
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections/{connection.id}",
                 connection.to_xml_string().encode(),
-                expected_status_codes=200)
+                expected_status_codes=200,
+            )
+
         except RequestException:
-            message = "Failed to update connection with ID {}" \
-                      " for application with ID {}".format(connection.id,
-                                                           app_id)
+            message = f"Failed to update connection with ID {connection.id} for application with ID {app_id}"
+
             logger.critical(message)
             raise IOError(message)
 
@@ -1496,12 +1517,13 @@ class Secure_App_Helper(Secure_Change_Helper):
         :raise IOError: If there was a communication error.
         If more than one object is created, True is returned.
         """
-        if not app_id and not app_name:
-            msg = "ID or name of application to update connections for is not provided"
-            logger.critical(msg)
-            raise ValueError(msg)
-        elif not app_id:
-            app_id = self.get_app_by_name(app_name).id
+        if not app_id:
+            if not app_name:
+                msg = "ID or name of application to update connections for is not provided"
+                logger.critical(msg)
+                raise ValueError(msg)
+            else:
+                app_id = self.get_app_by_name(app_name).id
 
         logger.info("Updating network objects for application with ID '%s'.", app_id)
 
@@ -1530,17 +1552,20 @@ class Secure_App_Helper(Secure_Change_Helper):
                 "Detailed_Application_Connection")
         try:
             self.put_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/connections".format(app_id),
-                connection_list.to_xml_string().encode(), expected_status_codes=200)
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections",
+                connection_list.to_xml_string().encode(),
+                expected_status_codes=200,
+            )
+
             return True
         except RequestException as error:
-            message = "Could not update the following connections: '{}', error was '{}'.".format(
-                [connection.name for connection in connection_list], error)
+            message = f"Could not update the following connections: '{[connection.name for connection in connection_list]}', error was '{error}'."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as error:
-            message = "Could not update the following connections: '{}', error was '{}'.".format(
-                [connection.name for connection in connection_list], error)
+            message = f"Could not update the following connections: '{[connection.name for connection in connection_list]}', error was '{error}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1569,14 +1594,13 @@ class Secure_App_Helper(Secure_Change_Helper):
         logger.info("Deleting Connection with ID %s from application with ID %s", connection_id, app_id)
         try:
             self.delete_uri(
-                "/securechangeworkflow/api/secureapp/repository/applications/{}/connections/{}".format(
-                    app_id,
-                    connection_id),
-                expected_status_codes=200)
+                f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections/{connection_id}",
+                expected_status_codes=200,
+            )
+
         except RequestException:
-            message = "Failed to delete connection with ID {} from SecureApp for Application with ID {}".format(
-                connection_id,
-                app_id)
+            message = f"Failed to delete connection with ID {connection_id} from SecureApp for Application with ID {app_id}"
+
             logger.critical(message)
             raise IOError(message)
 
@@ -1593,31 +1617,24 @@ class Secure_App_Helper(Secure_Change_Helper):
         if not app_id:
             app_id = self.get_app_by_name(app_name).id
         logger.info("Deleting all connection from application with ID %s", app_id)
-        connections = [connection for connection in self.get_connections_list_for_app_id(app_id)]
-        if connections:
+        if connections := list(self.get_connections_list_for_app_id(app_id)):
             deleted_connections = []
 
             for connection in connections:
                 try:
                     self.delete_uri(
-                        "/securechangeworkflow/api/secureapp/repository/applications/{}/connections/{}".format(
-                            app_id,
-                            connection.id),
-                        expected_status_codes=200)
+                        f"/securechangeworkflow/api/secureapp/repository/applications/{app_id}/connections/{connection.id}",
+                        expected_status_codes=200,
+                    )
+
                 except RequestException as error:
                     connections_names = (con.name for con in connections)
                     if deleted_connections:
-                        message = "Failed to delete all connections. Deleted '{}' out of '{}'." \
-                                  " Got error on connection '{}': {}".format(
-                            deleted_connections,
-                            connections_names,
-                            connection.name,
-                            error)
+                        message = f"Failed to delete all connections. Deleted '{deleted_connections}' out of '{connections_names}'. Got error on connection '{connection.name}': {error}"
+
                     else:
-                        message = "Failed to delete connections '{}'. Got error on connection '{}': {}".format(
-                            connections_names,
-                            connection.name,
-                            connections_names)
+                        message = f"Failed to delete connections '{connections_names}'. Got error on connection '{connection.name}': {connections_names}"
+
                     logger.critical(message)
                     raise IOError(message)
                 else:

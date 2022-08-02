@@ -126,8 +126,10 @@ def handle_unconfigured_loggers(handler, configured_loggers, log_data_is_updatea
     unconfigured_loggers = [logger_name for logger_name in REGISTERED_LOGGER_NAMES if
                             logger_name not in configured_logger_names]
     for logger_name in unconfigured_loggers:
-        print("Logger '{}' was not configured, setting log level to default ({}).".format(logger_name,
-                                                                                          DEFAULT_LOG_LEVEL_NAME))
+        print(
+            f"Logger '{logger_name}' was not configured, setting log level to default ({DEFAULT_LOG_LEVEL_NAME})."
+        )
+
         logger_ = logging.getLogger(logger_name)
         logger_.addHandler(handler)
         logger_.setLevel(DEFAULT_LOG_LEVEL)

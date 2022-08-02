@@ -25,7 +25,10 @@ from pytos.securetrack.xml_objects.rest.zones import Zone_List, Zone, Zone_Entry
 def fake_request_response(rest_file):
     full_path = os.path.dirname(os.path.abspath(__file__))
     sub_resources_dir = sys._getframe(1).f_locals['self'].__class__.__name__.lower()
-    resource_file = os.path.join(full_path, "resources", sub_resources_dir, "{}.xml".format(rest_file))
+    resource_file = os.path.join(
+        full_path, "resources", sub_resources_dir, f"{rest_file}.xml"
+    )
+
     with open(resource_file, mode='rb') as f:
         return f.read()
 
@@ -244,7 +247,7 @@ class TestZonesPoliciesAndRevisions(unittest.TestCase):
         src_tree = lxml.etree.fromstring(src_xml)
         src_b = io.BytesIO()
         src_tree.getroottree().write_c14n(src_b)
-        comment = 'Name: {}, Created at: {}'.format("New Zone", "2017-04-22 10:09:18")
+        comment = 'Name: New Zone, Created at: 2017-04-22 10:09:18'
         zone_obj = Zone(None, "New Zone", comment)
         dst_tree = lxml.etree.fromstring(zone_obj.to_xml_string())
         dst_b = io.BytesIO()

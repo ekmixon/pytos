@@ -18,8 +18,7 @@ logger = logging.getLogger(XML_LOGGER_NAME)
 
 
 def _get_tab_string(element_level):
-    tab_string = " " * XML_Base.SPACER_SIZE * element_level
-    return tab_string
+    return " " * XML_Base.SPACER_SIZE * element_level
 
 
 class Comparable:
@@ -33,7 +32,7 @@ class Comparable:
     def __eq__(self, other):
         equals = True
         if not type(self) == type(other):
-            raise TypeError("Uncomparable types '{}' and '{}'.".format(type(self), type(other)))
+            raise TypeError(f"Uncomparable types '{type(self)}' and '{type(other)}'.")
         elif self is other:
             return True
         else:
@@ -47,12 +46,17 @@ class Comparable:
 
     def __lt__(self, other):
         if isinstance(other, self.__class__):
-            for self_item, other_item in zip(self._key(), other._key()):
-                if self_item != other_item:
-                    return self_item < other_item
-            return False
+            return next(
+                (
+                    self_item < other_item
+                    for self_item, other_item in zip(self._key(), other._key())
+                    if self_item != other_item
+                ),
+                False,
+            )
+
         else:
-            raise TypeError("Unorderable types: {} < {}".format(type(self), type(other)))
+            raise TypeError(f"Unorderable types: {type(self)} < {type(other)}")
 
 
 class XML_Base:
@@ -65,7 +69,7 @@ class XML_Base:
         :param attribs: The XML attributes of the XML_List.
         :type attribs: dict
         """
-        if isinstance(xml_tag, str) or isinstance(xml_tag, int):
+        if isinstance(xml_tag, (str, int)):
             self._xml_tag = xml_tag
         else:
             raise ValueError("xml_tag must be either a string or integer, xml_tag is '{}' of type '{}'".format(xml_tag,
@@ -79,10 +83,7 @@ class XML_Base:
                 except TypeError:
                     self._attribs = {}
         except AttributeError:  # If set_attrib is called before __init__
-            if attribs:
-                self._attribs = attribs
-            else:
-                self._attribs = {}
+            self._attribs = attribs or {}
 
     def get_xml_tag(self):
         """Get the XML tag for the current element."""
@@ -150,8 +151,11 @@ class XML_List(XML_Base):
         xml_list_base_node = get_xml_node(xml_node, list_element_name, optional)
         list_data = []
         if xml_list_base_node:
-            for child_node in xml_list_base_node.iterfind(child_element_name):
-                list_data.append(child_class_type.from_xml_node(child_node))
+            list_data.extend(
+                child_class_type.from_xml_node(child_node)
+                for child_node in xml_list_base_node.iterfind(child_element_name)
+            )
+
         return cls(list_element_name, list_data)
 
     @classmethod
@@ -167,8 +171,8 @@ class XML_List(XML_Base):
                     try:
                         type_attribute = child_node.attrib[xml_tags.TYPE_ATTRIB]
                     except KeyError:
-                        message = "could not find type attribute in {},existing attributes: {}".format(child_node,
-                                                                                                       child_node.attrib)
+                        message = f"could not find type attribute in {child_node},existing attributes: {child_node.attrib}"
+
                         logger.error(message)
                         raise KeyError(message)
                 try:
@@ -177,7 +181,7 @@ class XML_List(XML_Base):
                     if default_class:
                         list_data.append(default_class.from_xml_node(child_node))
                     else:
-                        logger.critical("Unknown element '{}'. Skipping it.".format(type_attribute))
+                        logger.critical(f"Unknown element '{type_attribute}'. Skipping it.")
 
         return cls(list_element_name, list_data)
 
@@ -195,29 +199,28 @@ class XML_List(XML_Base):
         return cls(list_element_name, list_data)
 
     def to_xml_string(self, element_level=None):
-        if self.get_xml_tag():
-            if element_level is not None:
-                element_level += 1
-            else:
-                element_level = 0
-            logger.debug("Element level is '%s'.", element_level)
-            tab_string = _get_tab_string(element_level)
-            if self._list_data:
-                xml_string = "{tab_string}<{xml_tag}>".format(xml_tag=self.get_xml_tag(), tab_string=tab_string)
-                non_xml_items = []
-                for item in self._list_data:
-                    try:
-                        xml_string += "\n{}".format(item.to_xml_string(element_level))
-                    except AttributeError:
-                        non_xml_items.append(xml.sax.saxutils.escape(str(item)))
-                if non_xml_items:
-                    xml_string += "\n{}".format(",".join(non_xml_items))
-                xml_string += "\n{tab_string}</{xml_tag}>".format(xml_tag=self.get_xml_tag(), tab_string=tab_string)
-            else:
-                xml_string = "\n{tab_string}<{xml_tag}/>".format(xml_tag=self.get_xml_tag(), tab_string=tab_string)
-            return xml_string
-        else:
+        if not self.get_xml_tag():
             raise ValueError("{} must have a _xml_tag attribute in order to print in XML form.")
+        if element_level is not None:
+            element_level += 1
+        else:
+            element_level = 0
+        logger.debug("Element level is '%s'.", element_level)
+        tab_string = _get_tab_string(element_level)
+        if self._list_data:
+            xml_string = "{tab_string}<{xml_tag}>".format(xml_tag=self.get_xml_tag(), tab_string=tab_string)
+            non_xml_items = []
+            for item in self._list_data:
+                try:
+                    xml_string += f"\n{item.to_xml_string(element_level)}"
+                except AttributeError:
+                    non_xml_items.append(xml.sax.saxutils.escape(str(item)))
+            if non_xml_items:
+                xml_string += f'\n{",".join(non_xml_items)}'
+            xml_string += "\n{tab_string}</{xml_tag}>".format(xml_tag=self.get_xml_tag(), tab_string=tab_string)
+        else:
+            xml_string = "\n{tab_string}<{xml_tag}/>".format(xml_tag=self.get_xml_tag(), tab_string=tab_string)
+        return xml_string
 
     def to_xml_doc(self):
         """
@@ -280,7 +283,7 @@ class XML_List(XML_Base):
         return self._list_data
 
     def __repr__(self):
-        return "XML_List('{}', {})".format(self._xml_tag, [repr(item) for item in self])
+        return f"XML_List('{self._xml_tag}', {[repr(item) for item in self]})"
 
 
 class XML_Object_Base(XML_Base):
@@ -322,7 +325,7 @@ class XML_Object_Base(XML_Base):
         for key in self.__dict__:
             if isinstance(self.__dict__[key], XML_Object_Base):
                 self.__dict__[key].set_parent_node(self)
-            elif isinstance(self.__dict__[key], XML_List) or isinstance(self.__dict__[key], list):
+            elif isinstance(self.__dict__[key], (XML_List, list)):
                 for subitem in self.__dict__[key]:
                     if hasattr(subitem, SET_PARENT_NODE):
                         subitem.set_parent_node(self)
@@ -335,7 +338,7 @@ class XML_Object_Base(XML_Base):
             try:
                 item_node = item_node.get_parent_node()
             except AttributeError:
-                raise ValueError("Object {} does not have a parent node.".format(item_node))
+                raise ValueError(f"Object {item_node} does not have a parent node.")
         return item_node
 
     def to_xml_string(self, element_level=None):
@@ -344,63 +347,63 @@ class XML_Object_Base(XML_Base):
         :return: An XML representation of the object in string form.
         :rtype: str
         """
-        if self.get_xml_tag():
-            if element_level is not None:
-                element_level += 1
-            else:
-                element_level = 0
-            logger.debug("Element level is '%s'.", element_level)
-            item_tab_string = _get_tab_string(element_level + 1)
-            attrib_string = ""
-            for key, value in self.get_attribs().items():
-                attrib_string += ' {}="{}"'.format(key, value)
-            xml_string = "{tab_string}<{xml_tag}{attrib_string}>".format(xml_tag=self._xml_tag,
-                                                                         attrib_string=attrib_string,
-                                                                         tab_string=_get_tab_string(element_level))
-            for key in sorted(self.__dict__):
-                # Skip the self._xml_tag member and self._attribs of each class ( and any other member beginning with _.
-                if key.startswith("_"):
-                    continue
-                # If the element contains data, handle normally.
-                logger.debug("Handling item '%s'.", key)
-                # Handle a case where the member itself does not have an XML tag, but it contains XML elements.
-                if isinstance(self.__dict__[key], list):
-                    logger.debug("Handling list '%s' in XML form.", self.__dict__[key])
-                    non_xml_items = []
-                    for item in self.__dict__[key]:
-                        if item is not None:
-                            logger.debug("Handling list item '%s' in XML form.", item)
-                            try:
-                                xml_string += "\n{}".format(item.to_xml_string(element_level))
-                            except AttributeError:
-                                non_xml_items.append(xml.sax.saxutils.escape(str(item)))
-                    if non_xml_items:
-                        xml_string += "\n<{tag}>{non_xml_items}</{tag}>".format(tag=key,
-                                                                                non_xml_items=",".join(non_xml_items))
-                else:
-                    try:
-                        item_xml_string = self.__dict__[key].to_xml_string(element_level)
-                        xml_string += "\n{item_xml_string}".format(item_xml_string=item_xml_string)
-                        logger.debug("Handling XML_Base '%s'.", key)
-                    except AttributeError:
-                        # Handle the case where the member name conflicts with a reserved Python keyword,
-                        # so an underscore (_) is appended to member name to avoid the conflict.
-                        logger.debug("Handling other object type '%s'", key)
-                        key_name = key
-                        if key_name.endswith("_"):
-                            key_name = key_name[:-1]
-                        if self.__dict__[key] is not None:
-                            item_xml_string = xml.sax.saxutils.escape(str(self.__dict__[key]))
-                            xml_string += "\n{tab_string}<{xml_tag}>{item_xml_string}</{xml_tag}>".format(
-                                    xml_tag=key_name, item_xml_string=item_xml_string, tab_string=item_tab_string)
-                        else:
-                            xml_string += "\n{tab_string}<{xml_tag}/>".format(xml_tag=key_name,
-                                                                              tab_string=item_tab_string)
-            xml_string += "\n{tab_string}</{xml_tag}>".format(xml_tag=self.get_xml_tag(),
-                                                              tab_string=_get_tab_string(element_level))
-            return xml_string
-        else:
+        if not self.get_xml_tag():
             raise ValueError("{} must have a _xml_tag attribute in order to output to XML form.")
+        if element_level is not None:
+            element_level += 1
+        else:
+            element_level = 0
+        logger.debug("Element level is '%s'.", element_level)
+        item_tab_string = _get_tab_string(element_level + 1)
+        attrib_string = "".join(
+            f' {key}="{value}"' for key, value in self.get_attribs().items()
+        )
+
+        xml_string = "{tab_string}<{xml_tag}{attrib_string}>".format(xml_tag=self._xml_tag,
+                                                                     attrib_string=attrib_string,
+                                                                     tab_string=_get_tab_string(element_level))
+        for key in sorted(self.__dict__):
+            # Skip the self._xml_tag member and self._attribs of each class ( and any other member beginning with _.
+            if key.startswith("_"):
+                continue
+            # If the element contains data, handle normally.
+            logger.debug("Handling item '%s'.", key)
+                # Handle a case where the member itself does not have an XML tag, but it contains XML elements.
+            if isinstance(self.__dict__[key], list):
+                logger.debug("Handling list '%s' in XML form.", self.__dict__[key])
+                non_xml_items = []
+                for item in self.__dict__[key]:
+                    if item is not None:
+                        logger.debug("Handling list item '%s' in XML form.", item)
+                        try:
+                            xml_string += f"\n{item.to_xml_string(element_level)}"
+                        except AttributeError:
+                            non_xml_items.append(xml.sax.saxutils.escape(str(item)))
+                if non_xml_items:
+                    xml_string += "\n<{tag}>{non_xml_items}</{tag}>".format(tag=key,
+                                                                            non_xml_items=",".join(non_xml_items))
+            else:
+                try:
+                    item_xml_string = self.__dict__[key].to_xml_string(element_level)
+                    xml_string += "\n{item_xml_string}".format(item_xml_string=item_xml_string)
+                    logger.debug("Handling XML_Base '%s'.", key)
+                except AttributeError:
+                    # Handle the case where the member name conflicts with a reserved Python keyword,
+                    # so an underscore (_) is appended to member name to avoid the conflict.
+                    logger.debug("Handling other object type '%s'", key)
+                    key_name = key
+                    if key_name.endswith("_"):
+                        key_name = key_name[:-1]
+                    if self.__dict__[key] is not None:
+                        item_xml_string = xml.sax.saxutils.escape(str(self.__dict__[key]))
+                        xml_string += "\n{tab_string}<{xml_tag}>{item_xml_string}</{xml_tag}>".format(
+                                xml_tag=key_name, item_xml_string=item_xml_string, tab_string=item_tab_string)
+                    else:
+                        xml_string += "\n{tab_string}<{xml_tag}/>".format(xml_tag=key_name,
+                                                                          tab_string=item_tab_string)
+        xml_string += "\n{tab_string}</{xml_tag}>".format(xml_tag=self.get_xml_tag(),
+                                                          tab_string=_get_tab_string(element_level))
+        return xml_string
 
     def to_xml_doc(self):
         """
@@ -444,7 +447,7 @@ class XML_Object_Base(XML_Base):
                 xml_string = xml_file.read()
                 xml_node = ET.fromstring(xml_string)
         except FileNotFoundError:
-            message = "The file {} does not exist.".format(xml_path)
+            message = f"The file {xml_path} does not exist."
             logger.error(message)
             raise FileNotFoundError(message)
         else:
@@ -473,27 +476,27 @@ class Flat_XML_Object_Base(XML_Base):
         :return: An XML representation of the object in string form.
         :rtype: str
         """
-        if self.get_xml_tag():
-            if element_level is not None:
-                element_level += 1
-            else:
-                element_level = 0
-            logger.debug("Element level is '%s'.", element_level)
-            item_tab_string = _get_tab_string(element_level + 1)
-            attrib_string = ""
-            for key, value in self.get_attribs().items():
-                attrib_string += ' {}="{}"'.format(key, value)
-            xml_string = "{tab_string}<{xml_tag}{attrib_string}".format(tab_string=item_tab_string,
-                                                                        xml_tag=self._xml_tag,
-                                                                        attrib_string=attrib_string)
-            if self.content:
-                content = xml.sax.saxutils.escape(str(self.content))
-                xml_string += ">{content}</{xml_tag}>".format(content=content, xml_tag=self._xml_tag)
-            else:
-                xml_string += "/>"
-            return xml_string
-        else:
+        if not self.get_xml_tag():
             raise ValueError("{} must have a _xml_tag attribute in order to print in XML form.")
+        if element_level is not None:
+            element_level += 1
+        else:
+            element_level = 0
+        logger.debug("Element level is '%s'.", element_level)
+        item_tab_string = _get_tab_string(element_level + 1)
+        attrib_string = "".join(
+            f' {key}="{value}"' for key, value in self.get_attribs().items()
+        )
+
+        xml_string = "{tab_string}<{xml_tag}{attrib_string}".format(tab_string=item_tab_string,
+                                                                    xml_tag=self._xml_tag,
+                                                                    attrib_string=attrib_string)
+        if self.content:
+            content = xml.sax.saxutils.escape(str(self.content))
+            xml_string += ">{content}</{xml_tag}>".format(content=content, xml_tag=self._xml_tag)
+        else:
+            xml_string += "/>"
+        return xml_string
 
     def to_xml_doc(self):
         """
@@ -556,12 +559,12 @@ class Service_Type:
             try:
                 port = int(socket.getservbyname(port.lower()))
             except OSError:
-                raise ValueError("Service for port '{}' not found.".format(port.lower()))
+                raise ValueError(f"Service for port '{port.lower()}' not found.")
         elif isinstance(port, int):
             if not 0 <= port <= 65535:
                 raise ValueError("Port must be between 0 and 65535.")
         else:
-            raise ValueError("Invalid port '{}'.".format(port))
+            raise ValueError(f"Invalid port '{port}'.")
         return port
 
     @staticmethod
@@ -570,12 +573,12 @@ class Service_Type:
             try:
                 ip_protocol = socket.getprotobyname(ip_protocol.lower())
             except OSError:
-                raise ValueError("Protocol '{}' not found.".format(ip_protocol.lower()))
+                raise ValueError(f"Protocol '{ip_protocol.lower()}' not found.")
         elif isinstance(ip_protocol, int):
             if not 0 <= ip_protocol <= 255:
                 raise ValueError("Protocol must be between 0 and 255.")
         else:
-            raise ValueError("Invalid IP protocol '{}'.".format(ip_protocol))
+            raise ValueError(f"Invalid IP protocol '{ip_protocol}'.")
         return ip_protocol
 
 
@@ -598,7 +601,7 @@ class Single_Service_Type(Service_Type):
         return self == item
 
     def __hash__(self):
-        return hash("{}/{}".format(self.ip_protocol, self.port))
+        return hash(f"{self.ip_protocol}/{self.port}")
 
     def __lt__(self, other):
 
@@ -614,10 +617,10 @@ class Single_Service_Type(Service_Type):
                 return self.ip_protocol < other.ip_protocol or (
                     self.ip_protocol == other.ip_protocol and self.port < other.port)
             except AttributeError:
-                raise TypeError("Unorderable types: {} < {}".format(type(self), type(other)))
+                raise TypeError(f"Unorderable types: {type(self)} < {type(other)}")
 
     def __repr__(self):
-        return "Single_Service_Type({},{})".format(self.ip_protocol, self.port)
+        return f"Single_Service_Type({self.ip_protocol},{self.port})"
 
 
 class Any_Service_Type(Service_Type):
@@ -655,17 +658,12 @@ class Range_Service_Type(Service_Type):
             return False
 
     def __repr__(self):
-        return "Range_Service_Type({},{},{})".format(self.ip_protocol, self.start_port, self.end_port)
+        return f"Range_Service_Type({self.ip_protocol},{self.start_port},{self.end_port})"
 
     def __contains__(self, item):
         try:
             if hasattr(item, "_members"):
-                for member in item.members:
-                    if member in self:
-                        continue
-                    else:
-                        return False
-                return True
+                return all(member in self for member in item.members)
             elif self.ip_protocol == item.ip_protocol:
                 if hasattr(item, "start_port"):
                     if self.start_port <= item.start_port and self.end_port >= item.end_port:
@@ -694,18 +692,15 @@ class Range_Service_Type(Service_Type):
                 return self.ip_protocol < other.ip_protocol or (
                     self.ip_protocol == other.ip_protocol and self.end_port < other.port)
             except AttributeError:
-                raise TypeError("Unorderable types: {} < {}".format(type(self), type(other)))
+                raise TypeError(f"Unorderable types: {type(self)} < {type(other)}")
 
     def __hash__(self):
-        return hash("{}/{}-{}".format(self.ip_protocol, self.start_port, self.end_port))
+        return hash(f"{self.ip_protocol}/{self.start_port}-{self.end_port}")
 
 
 class Group_Service_Type(Service_Type):
     def __init__(self, members=None):
-        if members is None:
-            self._members = []
-        else:
-            self._members = members
+        self._members = [] if members is None else members
 
     def __iter__(self):
         return iter(self._members)
@@ -713,15 +708,9 @@ class Group_Service_Type(Service_Type):
     def __contains__(self, item):
         try:
             if hasattr(item, "_members"):
-                for item_member in item:
-                    if item_member not in self:
-                        return False
-                return True
+                return all(item_member in self for item_member in item)
             else:
-                for member in self:
-                    if item in member or item == member:
-                        return True
-                return False
+                return any(item in member or item == member for member in self)
         except AttributeError:
             return False
 
@@ -729,15 +718,10 @@ class Group_Service_Type(Service_Type):
         return self._members.append(service)
 
     def __lt__(self, other):
-        if type(other) == Any_Service_Type:
-            return True
-        elif hasattr(other, '_members'):
-            return False
-        else:
-            return True
+        return type(other) == Any_Service_Type or not hasattr(other, '_members')
 
     def __repr__(self):
-        return "Group_Service_Type([{}])".format(",".join((repr(member) for member in self)))
+        return f'Group_Service_Type([{",".join((repr(member) for member in self))}])'
 
     def __len__(self):
         return len(self._members)
@@ -760,36 +744,27 @@ class Service_Set:
         self._services.add(item)
 
     def issubset(self, other_set):
-        for service in self:
-            if service not in other_set:
-                return False
-        return True
+        return all(service in other_set for service in self)
 
     def copy(self):
         return self.__class__(self._services)
 
     def __repr__(self):
-        return "Service_Set([{}])".format(",".join((repr(service) for service in self)))
+        return f'Service_Set([{",".join((repr(service) for service in self))}])'
 
     def __iter__(self):
         return iter(self._services)
 
     def __contains__(self, other_service):
         if hasattr(other_service, "_members"):
-            for member in other_service:
-                if member not in self:
-                    return False
-            return True
+            return all(member in self for member in other_service)
         elif hasattr(other_service, '_services'):
-            for service in other_service:
-                if service not in self:
-                    return False
-            return True
+            return all(service in self for service in other_service)
         else:
-            for service in self:
-                if other_service in service or other_service == service:
-                    return True
-            return False
+            return any(
+                other_service in service or other_service == service
+                for service in self
+            )
 
     def __len__(self):
         return len(self._services)
@@ -801,10 +776,10 @@ class Singleton(type):
     """
     _instances = {}
 
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+    def __call__(self, *args, **kwargs):
+        if self not in self._instances:
+            self._instances[self] = super(Singleton, self).__call__(*args, **kwargs)
+        return self._instances[self]
 
 
 class SubclassRegistry(type):
@@ -820,8 +795,8 @@ class SubclassRegistry(type):
         cls.registry -= set(bases)  # Remove base classes
 
     # Metamethods, called on class objects:
-    def __iter__(cls):
-        return iter(cls.registry)
+    def __iter__(self):
+        return iter(self.registry)
 
 
 class SubclassWithIdentifierRegistry(type):
@@ -838,8 +813,8 @@ class SubclassWithIdentifierRegistry(type):
         if hasattr(cls, cls.CLASS_IDENTIFIER_VAR):
             cls.registry[cls.class_identifier] = cls
 
-    def __getitem__(cls, item):
-        return cls.registry[item]
+    def __getitem__(self, item):
+        return self.registry[item]
 
 
 class IPNetworkMixin(metaclass=ABCMeta):

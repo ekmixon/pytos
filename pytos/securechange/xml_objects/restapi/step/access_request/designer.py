@@ -37,9 +37,7 @@ class DesignerResult(XML_Object_Base):
         return self.status != DesignerResult.IMPLEMENTED_FAILURE
 
     def get_result_url(self):
-        if self.result is None:
-            return None
-        return self.result._url
+        return None if self.result is None else self.result._url
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -65,10 +63,11 @@ class DesignerResults(XML_Object_Base):
             push_status = device_suggestion.is_pushed()
             if push_status is None:
                 for suggestion_per_binding in device_suggestion.suggestions_per_binding:
-                    for instruction in suggestion_per_binding.instructions:
-                        if not instruction.is_fully_implemented():
-                            return False
-                    return True
+                    return all(
+                        instruction.is_fully_implemented()
+                        for instruction in suggestion_per_binding.instructions
+                    )
+
             elif not push_status:
                 return False
         return True
@@ -79,11 +78,9 @@ class DesignerResults(XML_Object_Base):
             # device_str = device_suggestion.to_pretty_str()
             binding_list = []
             for binding in device_suggestion.suggestions_per_binding:
-                instruction_list = []
-                for instruction in binding.instructions:
-                    instruction_list.append(str(instruction))
-                binding_list.append('{}; {}'.format(str(binding), ','.join(instruction_list)))
-            device_list.append('{}; {}'.format(str(device_suggestion), ','.join(binding_list)))
+                instruction_list = [str(instruction) for instruction in binding.instructions]
+                binding_list.append(f"{str(binding)}; {','.join(instruction_list)}")
+            device_list.append(f"{str(device_suggestion)}; {','.join(binding_list)}")
         return '\n'.join(device_list)
 
     @classmethod
@@ -115,13 +112,11 @@ class DesignerDeviceSuggestions(XML_Object_Base):
         super().__init__(Elements.DEVICE_SUGGESTION)
 
     def __str__(self):
-        return "Device Name: {}".format(self.management_name)
+        return f"Device Name: {self.management_name}"
 
     def is_pushed(self):
         if self.push_status is not None:
-            if self.push_status == DesignerDeviceSuggestions.PUSH_SUCCESS_STATUS:
-                return True
-            return False
+            return self.push_status == DesignerDeviceSuggestions.PUSH_SUCCESS_STATUS
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -167,7 +162,7 @@ class DesignerBindingSuggestion(XML_Object_Base):
         super().__init__(Elements.BINDING_SUGGESTION)
 
     def __str__(self):
-        return "Binding Name: {}".format(self.binding_name)
+        return f"Binding Name: {self.binding_name}"
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -220,8 +215,7 @@ class DesignerInstruction(XML_Object_Base):
         device_added_network_object = None
         rule_placement = get_xml_text_value(xml_node, Elements.RULE_PLACMENT)
         change_action = get_xml_text_value(xml_node, Elements.CHANGE_ACTION)
-        rule_node = get_xml_node(xml_node, Elements.RULE, optional=True)
-        if rule_node:
+        if rule_node := get_xml_node(xml_node, Elements.RULE, optional=True):
             rule = SlimRule.from_xml_node(rule_node)
         else:
             rule = None

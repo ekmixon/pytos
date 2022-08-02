@@ -45,17 +45,25 @@ class Ticket_Info(XML_Object_Base):
             self.subject = get_xml_text_value(xml_node, Elements.SUBJECT)
             self.createDate = get_xml_text_value(xml_node, Elements.CREATE_DATE)
             self.updateDate = get_xml_text_value(xml_node, Elements.UPDATE_DATE)
-            current_stage_node = get_xml_node(xml_node, Elements.CURRENT_STAGE, True)
-            if current_stage_node:
+            if current_stage_node := get_xml_node(
+                xml_node, Elements.CURRENT_STAGE, True
+            ):
                 self.current_stage_id = get_xml_int_value(current_stage_node, Elements.ID)
                 self.current_stage_name = get_xml_text_value(current_stage_node, Elements.NAME)
             else:
                 self.current_stage_id, self.current_stage_name = None, None
 
-            completion_data = get_xml_node(xml_node, Elements.COMPLETION_DATA, True)
-            if completion_data:
-                self.completion_step_id = get_xml_int_value(completion_data, 'stage/' + Elements.ID)
-                self.completion_step_name = get_xml_text_value(completion_data, 'stage/' + Elements.NAME)
+            if completion_data := get_xml_node(
+                xml_node, Elements.COMPLETION_DATA, True
+            ):
+                self.completion_step_id = get_xml_int_value(
+                    completion_data, f'stage/{Elements.ID}'
+                )
+
+                self.completion_step_name = get_xml_text_value(
+                    completion_data, f'stage/{Elements.NAME}'
+                )
+
             else:
                 self.completion_step_id, self.completion_step_name = None, None
 
@@ -77,9 +85,7 @@ class Scripted_Dynamic_Assignment_Mode(enum.Enum):
 
     @staticmethod
     def validate(value):
-        if value in [e.value for e in list(Scripted_Dynamic_Assignment_Mode)]:
-            return True
-        return False
+        return value in [e.value for e in list(Scripted_Dynamic_Assignment_Mode)]
 
 
 class Scripted_Dynamic_Assignment(XML_List):
@@ -148,8 +154,11 @@ class Scripted_Dynamic_Assignment_Access_Requests_Node(XML_List):
     def __init__(self, access_request_ids):
         self.access_requests = []
         if access_request_ids:
-            for ar_id in access_request_ids:
-                self.access_requests.append(Flat_XML_Object_Base(Elements.ACCESS_REQUEST_ID, content=ar_id))
+            self.access_requests.extend(
+                Flat_XML_Object_Base(Elements.ACCESS_REQUEST_ID, content=ar_id)
+                for ar_id in access_request_ids
+            )
+
         super().__init__(Elements.ACCESS_REQUESTS, self.access_requests)
 
 
@@ -176,7 +185,7 @@ class Scripted_Dynamic_Assignment_Assignment_Node(XML_Object_Base):
         try:
             self.assignment_mode = Scripted_Dynamic_Assignment_Mode(assignment_mode).value
         except ValueError:
-            raise ValueError("Wrong assignment_mode '{}'".format(assignment_mode))
+            raise ValueError(f"Wrong assignment_mode '{assignment_mode}'")
         if assigner_id:
             self.assigner_id = assigner_id
         elif assigner_username:

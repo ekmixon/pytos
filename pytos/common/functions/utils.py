@@ -43,9 +43,8 @@ class FileLock:
         self.blocking = blocking
         if not lock_folder:
             lock_folder = FileLock.DEFAULT_FILE_LOCK_PATH
-        else:
-            if not lock_folder.endswith("/"):
-                lock_folder += "/"
+        elif not lock_folder.endswith("/"):
+            lock_folder += "/"
         self.file_path = lock_folder + self.lock_file_name
         self._get_lock_file_handle()
 
@@ -63,20 +62,16 @@ class FileLock:
         if blocking is None:
             blocking = self.blocking
 
-        if blocking:
-            lock_mode = fcntl.LOCK_EX
-        else:
-            lock_mode = fcntl.LOCK_EX | fcntl.LOCK_NB
+        lock_mode = fcntl.LOCK_EX if blocking else fcntl.LOCK_EX | fcntl.LOCK_NB
         if self.lock_file.closed:
             self._get_lock_file_handle()
-        if not self.locked:
-            try:
-                self.lock = fcntl.flock(self.lock_file, lock_mode)
-                self.locked = True
-            except IOError:
-                raise IOError("File '{}' is already locked.".format(self.lock_file_name))
-        else:
-            raise IOError("File '{}' is already locked.".format(self.lock_file_name))
+        if self.locked:
+            raise IOError(f"File '{self.lock_file_name}' is already locked.")
+        try:
+            self.lock = fcntl.flock(self.lock_file, lock_mode)
+            self.locked = True
+        except IOError:
+            raise IOError(f"File '{self.lock_file_name}' is already locked.")
 
     def release(self):
         if self.locked:
@@ -97,8 +92,8 @@ class SessionTokenFileLock:
         self.lock = None
         self.lock_file = None
         self.token_timeout = token_timeout
-        self.file_path = "/var/run/ps/{}_token.lock".format(file_prefix)
-        self.token_file_path = "/var/run/ps/{}_token".format(file_prefix)
+        self.file_path = f"/var/run/ps/{file_prefix}_token.lock"
+        self.token_file_path = f"/var/run/ps/{file_prefix}_token"
         self._get_lock_file_handle()
 
     def __enter__(self):
@@ -113,14 +108,13 @@ class SessionTokenFileLock:
     def acquire(self):
         if self.lock_file.closed:
             self._get_lock_file_handle()
-        if not self.locked:
-            try:
-                self.lock = fcntl.flock(self.lock_file, fcntl.LOCK_EX)
-                self.locked = True
-            except IOError:
-                raise IOError("Session token file '{}' is already locked.".format(self.file_path))
-        else:
-            raise IOError("Session token file '{}' is already locked.".format(self.file_path))
+        if self.locked:
+            raise IOError(f"Session token file '{self.file_path}' is already locked.")
+        try:
+            self.lock = fcntl.flock(self.lock_file, fcntl.LOCK_EX)
+            self.locked = True
+        except IOError:
+            raise IOError(f"Session token file '{self.file_path}' is already locked.")
 
     def release(self):
         if self.locked:
@@ -157,10 +151,8 @@ def get_range_including_end(start, end):
 
 def split_iterable(iterable, size):
     iterator = iter(iterable)
-    item = list(itertools.islice(iterator, size))
-    while item:
+    while item := list(itertools.islice(iterator, size)):
         yield item
-        item = list(itertools.islice(iterator, size))
 
 
 def convert_timedelta_to_seconds(duration):
@@ -168,7 +160,7 @@ def convert_timedelta_to_seconds(duration):
     try:
         return duration.total_seconds()
     except AttributeError:
-        message = "Could not convert timedelta {} to seconds floating number.".format(duration)
+        message = f"Could not convert timedelta {duration} to seconds floating number."
         logger.error(message)
         raise ValueError(message)
 
@@ -220,11 +212,10 @@ def generate_hash(file_name, hash_algo="sha256"):
     """
     hasher = getattr(hashlib, hash_algo, None)
     if hasher is None:
-        raise ValueError("Unknown hash algorithm '{}'.".format(hash_algo))
+        raise ValueError(f"Unknown hash algorithm '{hash_algo}'.")
     with open(file_name, "rb") as file:
         hasher.update(file.read())
-        file_hash = hasher.hexdigest()
-        return file_hash
+        return hasher.hexdigest()
 
 
 def get_ssh_client(host, username, password=None, keyfile=None):
@@ -238,7 +229,7 @@ def get_ssh_client(host, username, password=None, keyfile=None):
      :rtype: paramiko.SSHClient
      :raises: ValueError, PermissionError, ConnectionRefusedError
     """
-    logger.info("Creating SSH connection to '{}' with user '{}'.".format(host, username))
+    logger.info(f"Creating SSH connection to '{host}' with user '{username}'.")
     ssh_client = paramiko.SSHClient()
     ssh_client.load_system_host_keys()
     ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -253,11 +244,14 @@ def get_ssh_client(host, username, password=None, keyfile=None):
             raise ValueError('Either password or keyfile must be passed to get_ssh_client.')
     except paramiko.ssh_exception.AuthenticationException:
         ssh_client.close()
-        raise PermissionError('Incorrect credentials for host {}'.format(host))
+        raise PermissionError(f'Incorrect credentials for host {host}')
     except (paramiko.ssh_exception.SSHException, socket_error) as ex:
         ssh_client.close()
-        raise ConnectionRefusedError('Could not connect to host {}, error:\n{}'.format(host, str(ex)))
-    logger.info('Successfully connected to {}'.format(host))
+        raise ConnectionRefusedError(
+            f'Could not connect to host {host}, error:\n{str(ex)}'
+        )
+
+    logger.info(f'Successfully connected to {host}')
     return ssh_client
 
 
@@ -272,10 +266,12 @@ def transfer_file_sftp(ssh_client, local_path, remote_path, callback=None):
      :param callback:
      :type: callable that accepts 2 arguments, bytes_transferred and total_bytes
     """
-    logger.info("Transferring file '{}' to remote path {}.".format(local_path, remote_path))
+    logger.info(f"Transferring file '{local_path}' to remote path {remote_path}.")
     sftp_client = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
     sftp_client.put(local_path, remote_path, callback=callback)
-    logger.info("Done transferring file '{}' to remote path {}.".format(local_path, remote_path))
+    logger.info(
+        f"Done transferring file '{local_path}' to remote path {remote_path}."
+    )
 
 
 def get_file_sftp(ssh_client, local_path, remote_path):
@@ -285,7 +281,7 @@ def get_file_sftp(ssh_client, local_path, remote_path):
     :param remote_path: Full path of the remote file
     :return: None
     """
-    logger.info("Getting file '{}' and saving to '{}'".format(remote_path, local_path))
+    logger.info(f"Getting file '{remote_path}' and saving to '{local_path}'")
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     sftp_client = paramiko.SFTPClient.from_transport(ssh_client.get_transport())
     sftp_client.get(remote_path, local_path)

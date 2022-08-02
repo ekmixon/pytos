@@ -122,30 +122,48 @@ class Test_Access_Request_Generator(unittest.TestCase):
         host_name_csv_1_without_mask = host_name_csv_1.split('/')[0]
 
         assert len(request.rules) == num_of_rules_in_csv_1
-        assert request.rules[0] == {'comment': 'Allow {} to access the 10.1.1.1 DNS server via TCP'.format(host_name_csv_1),
-                                    'destinations': [{'netmask': '255.255.255.255',
-                                                      'address': '10.1.1.1',
-                                                      'type': 'IPV4_WITH_MASK'}],
-                                    'targets': ['ANY'],
-                                    'sources': [{'netmask': host_netmask_csv_1,
-                                                 'address': host_name_csv_1_without_mask,
-                                                 'type': host_name_type_csv_1}],
-                                    'services': [{'port': '53',
-                                                  'protocol': 'TCP',
-                                                  'type': 'PROTOCOL'}],
-                                    'action': 'Accept'}
-        assert request.rules[1] == {'comment': 'Allow {} to access the 10.1.1.1 DNS server via UDP'.format(host_name_csv_1),
-                                    'destinations': [{'netmask': '255.255.255.255',
-                                                      'address': '10.1.1.1',
-                                                      'type': 'IPV4_WITH_MASK'}],
-                                    'targets': ['ANY'],
-                                    'sources': [{'netmask': host_netmask_csv_1,
-                                                 'address': host_name_csv_1_without_mask,
-                                                 'type': host_name_type_csv_1}],
-                                    'services': [{'port': '53',
-                                                  'protocol': 'UDP',
-                                                  'type': 'PROTOCOL'}],
-                                    'action': 'Accept'}
+        assert request.rules[0] == {
+            'comment': f'Allow {host_name_csv_1} to access the 10.1.1.1 DNS server via TCP',
+            'destinations': [
+                {
+                    'netmask': '255.255.255.255',
+                    'address': '10.1.1.1',
+                    'type': 'IPV4_WITH_MASK',
+                }
+            ],
+            'targets': ['ANY'],
+            'sources': [
+                {
+                    'netmask': host_netmask_csv_1,
+                    'address': host_name_csv_1_without_mask,
+                    'type': host_name_type_csv_1,
+                }
+            ],
+            'services': [{'port': '53', 'protocol': 'TCP', 'type': 'PROTOCOL'}],
+            'action': 'Accept',
+        }
+
+        assert request.rules[1] == {
+            'comment': f'Allow {host_name_csv_1} to access the 10.1.1.1 DNS server via UDP',
+            'destinations': [
+                {
+                    'netmask': '255.255.255.255',
+                    'address': '10.1.1.1',
+                    'type': 'IPV4_WITH_MASK',
+                }
+            ],
+            'targets': ['ANY'],
+            'sources': [
+                {
+                    'netmask': host_netmask_csv_1,
+                    'address': host_name_csv_1_without_mask,
+                    'type': host_name_type_csv_1,
+                }
+            ],
+            'services': [{'port': '53', 'protocol': 'UDP', 'type': 'PROTOCOL'}],
+            'action': 'Accept',
+        }
+
         csv_file_wrapper.close()
 
     def test_from_csv_file_FOR_valid_file_2(self):
@@ -158,55 +176,89 @@ class Test_Access_Request_Generator(unittest.TestCase):
         host_name_csv_2_without_mask = host_name_csv_2.split('/')[0]
 
         assert len(request.rules) == num_of_rules_in_csv_2
-        assert request.rules[0] == {'comment': 'Allow {} to access subnet 192.168.123.0/24'.format(host_name_csv_2),
-                                    'destinations': [{'netmask': '255.255.255.0',
-                                                      'address': '192.168.123.0',
-                                                      'type': 'IPV4_WITH_MASK'}],
-                                    'targets': ['ANY'],
-                                    'sources': [{'netmask': host_netmask_csv_2,
-                                                 'address': host_name_csv_2_without_mask,
-                                                 'type': host_name_type_csv_2}],
-                                    'services': [{'type': 'ANY'}],
-                                    'action': 'Accept'}
-        assert request.rules[1] == {'comment': 'Allow {} to access the 10.1.1.1 DNS server via TCP'.format(host_name_csv_2),
-                                    'destinations': [{'netmask': '255.255.255.255',
-                                                      'address': '10.1.1.1',
-                                                      'type': 'IPV4_WITH_MASK'},
-                                                     {'netmask': '255.255.255.0',
-                                                      'address': '11.2.2.2',
-                                                      'type': 'IPV4_WITH_MASK'}],
-                                    'targets': ['ANY'],
-                                    'sources': [{'netmask': host_netmask_csv_2,
-                                                 'address': host_name_csv_2_without_mask,
-                                                 'type': host_name_type_csv_2}],
-                                    'services': [{'port': '53',
-                                                  'protocol': 'TCP',
-                                                  'type': 'PROTOCOL'}],
-                                    'action': 'Accept'}
-        assert request.rules[2] == {'comment': 'Allow {} to access the 10.1.1.1 DNS server via UDP'.format(host_name_csv_2),
-                                    'destinations': [{'netmask': '255.255.255.255',
-                                                      'address': '10.1.1.1',
-                                                      'type': 'IPV4_WITH_MASK'}],
-                                    'targets': ['Cisco'],
-                                    'sources': [{'netmask': host_netmask_csv_2,
-                                                 'address': host_name_csv_2_without_mask,
-                                                 'type': host_name_type_csv_2}],
-                                    'services': [{'port': '53',
-                                                  'protocol': 'UDP',
-                                                  'type': 'PROTOCOL'}],
-                                    'action': 'Accept'}
-        assert request.rules[3] == {'comment': 'Block all SSH traffic to {}'.format(host_name_csv_2),
-                                    'destinations': [{'netmask': host_netmask_csv_2,
-                                                      'address': host_name_csv_2_without_mask,
-                                                      'type': host_name_type_csv_2}],
-                                    'targets': ['ANY'],
-                                    'sources': [{'netmask': None,
-                                                 'address': None,
-                                                 'type': 'ANY'}],
-                                    'services': [{'port': '22',
-                                                  'protocol': 'TCP',
-                                                  'type': 'PROTOCOL'}],
-                                    'action': 'Drop'}
+        assert request.rules[0] == {
+            'comment': f'Allow {host_name_csv_2} to access subnet 192.168.123.0/24',
+            'destinations': [
+                {
+                    'netmask': '255.255.255.0',
+                    'address': '192.168.123.0',
+                    'type': 'IPV4_WITH_MASK',
+                }
+            ],
+            'targets': ['ANY'],
+            'sources': [
+                {
+                    'netmask': host_netmask_csv_2,
+                    'address': host_name_csv_2_without_mask,
+                    'type': host_name_type_csv_2,
+                }
+            ],
+            'services': [{'type': 'ANY'}],
+            'action': 'Accept',
+        }
+
+        assert request.rules[1] == {
+            'comment': f'Allow {host_name_csv_2} to access the 10.1.1.1 DNS server via TCP',
+            'destinations': [
+                {
+                    'netmask': '255.255.255.255',
+                    'address': '10.1.1.1',
+                    'type': 'IPV4_WITH_MASK',
+                },
+                {
+                    'netmask': '255.255.255.0',
+                    'address': '11.2.2.2',
+                    'type': 'IPV4_WITH_MASK',
+                },
+            ],
+            'targets': ['ANY'],
+            'sources': [
+                {
+                    'netmask': host_netmask_csv_2,
+                    'address': host_name_csv_2_without_mask,
+                    'type': host_name_type_csv_2,
+                }
+            ],
+            'services': [{'port': '53', 'protocol': 'TCP', 'type': 'PROTOCOL'}],
+            'action': 'Accept',
+        }
+
+        assert request.rules[2] == {
+            'comment': f'Allow {host_name_csv_2} to access the 10.1.1.1 DNS server via UDP',
+            'destinations': [
+                {
+                    'netmask': '255.255.255.255',
+                    'address': '10.1.1.1',
+                    'type': 'IPV4_WITH_MASK',
+                }
+            ],
+            'targets': ['Cisco'],
+            'sources': [
+                {
+                    'netmask': host_netmask_csv_2,
+                    'address': host_name_csv_2_without_mask,
+                    'type': host_name_type_csv_2,
+                }
+            ],
+            'services': [{'port': '53', 'protocol': 'UDP', 'type': 'PROTOCOL'}],
+            'action': 'Accept',
+        }
+
+        assert request.rules[3] == {
+            'comment': f'Block all SSH traffic to {host_name_csv_2}',
+            'destinations': [
+                {
+                    'netmask': host_netmask_csv_2,
+                    'address': host_name_csv_2_without_mask,
+                    'type': host_name_type_csv_2,
+                }
+            ],
+            'targets': ['ANY'],
+            'sources': [{'netmask': None, 'address': None, 'type': 'ANY'}],
+            'services': [{'port': '22', 'protocol': 'TCP', 'type': 'PROTOCOL'}],
+            'action': 'Drop',
+        }
+
         csv_file_wrapper.close()
 
     def test_from_csv_file_FOR_none_existent_file(self):
@@ -288,7 +340,7 @@ class Test_Access_Request_Generator(unittest.TestCase):
         trees = [ET.fromstring(rule.to_xml_string()) for rule in access_requests]
         for rule_num, rule in enumerate(trees):
             # Asserting request number/name.
-            assert rule.find('order').text == 'AR{}'.format(rule_num + 1)
+            assert rule.find('order').text == f'AR{rule_num + 1}'
 
             # Asserting the targets of the request.
             for tar_num, target in enumerate(rule.find('targets').iter('target')):

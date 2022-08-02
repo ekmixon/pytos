@@ -15,8 +15,7 @@ TOS_VERSION_REGEX = re.compile(
 def get_st_conf():
     with open(ST_CONF_XML_PATH) as xml_file:
         xml_data = xml_file.read()
-    xml_node = ET.fromstring(xml_data)
-    return xml_node
+    return ET.fromstring(xml_data)
 
 
 def is_ha_server_status_active():
@@ -30,12 +29,11 @@ def is_ha_server_status_active():
     elif ha_type == standby_status:
         return False
     else:
-        raise ValueError("Unknown HA status '{}'.".format(ha_type))
+        raise ValueError(f"Unknown HA status '{ha_type}'.")
 
 def get_server_type():
     st_conf_xml_node = get_st_conf()
-    server_type = get_xml_text_value(st_conf_xml_node, "Server_Type")
-    return server_type
+    return get_xml_text_value(st_conf_xml_node, "Server_Type")
 
 
 def get_tos_version():
@@ -47,8 +45,8 @@ def get_tos_version():
     tss_process = subprocess.Popen([TSS_EXECUTABLE_PATH, 'ver'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     tss_ver_output, _ = tss_process.communicate()
     tos_version_match = re.match(TOS_VERSION_REGEX, tss_ver_output)
-    tos_version_major = int(tos_version_match.group("tos_version_major"))
-    tos_version_minor = int(tos_version_match.group("tos_version_minor"))
+    tos_version_major = int(tos_version_match["tos_version_major"])
+    tos_version_minor = int(tos_version_match["tos_version_minor"])
     return tos_version_major, tos_version_minor
 
 
@@ -62,12 +60,11 @@ def create_backup():
     print("Creating backup file.")
 
     export_path_command = 'export PATH="${PATH}:/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/root/bin"'
-    backup_command = "{} {}".format(TSS_EXECUTABLE_PATH, "backup")
+    backup_command = f"{TSS_EXECUTABLE_PATH} backup"
     command_string = ';'.join((export_path_command, backup_command))
 
     try:
         output = subprocess.check_output(command_string, shell=True).decode()
     except subprocess.CalledProcessError:
         raise IOError("Could not create backup file.")
-    backup_file_name = re.search(backup_file_name_regex, output, re.MULTILINE).group(1)
-    return backup_file_name
+    return re.search(backup_file_name_regex, output, re.MULTILINE)[1]

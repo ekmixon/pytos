@@ -39,9 +39,11 @@ class TicketList(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        tickets = []
-        for ticket_node in xml_node.findall(Elements.TICKET):
-            tickets.append(Ticket.from_xml_node(ticket_node))
+        tickets = [
+            Ticket.from_xml_node(ticket_node)
+            for ticket_node in xml_node.findall(Elements.TICKET)
+        ]
+
         return cls(tickets)
 
 
@@ -111,14 +113,16 @@ class Ticket(XML_Object_Base):
         expiration_field_name = get_xml_text_value(xml_node, Elements.EXPIRATION_FIELD_NAME)
         expiration_date = get_xml_text_value(xml_node, Elements.EXPIRATION_DATE)
 
-        current_step_node = get_xml_node(xml_node, Elements.CURRENT_STEP, True)
-        if current_step_node:
+        if current_step_node := get_xml_node(
+            xml_node, Elements.CURRENT_STEP, True
+        ):
             current_step = Current_Step.from_xml_node(current_step_node)
         else:
             current_step = None
 
-        application_details_node = get_xml_node(xml_node, Elements.APPLICATION_DETAILS, True)
-        if application_details_node:
+        if application_details_node := get_xml_node(
+            xml_node, Elements.APPLICATION_DETAILS, True
+        ):
             application_details = Application_Details.from_xml_node(application_details_node)
         else:
             application_details = None
@@ -142,9 +146,8 @@ class Ticket(XML_Object_Base):
             if case_sensitive:
                 if step.name == step_name:
                     return step
-            else:
-                if step.name.lower() == step_name.lower():
-                    return step
+            elif step.name.lower() == step_name.lower():
+                return step
         raise ValueError("A ticket step with the name '%s' could not be found.", step_name)
 
     def get_current_step(self):
@@ -223,7 +226,7 @@ class Ticket(XML_Object_Base):
         for step in self.steps:
             if step.id == step_id:
                 return step
-        raise ValueError("A ticket step with the ID '{}' could not be found.".format(step_id))
+        raise ValueError(f"A ticket step with the ID '{step_id}' could not be found.")
 
     def get_step_by_index(self, step_index):
         """
@@ -254,7 +257,10 @@ class Ticket(XML_Object_Base):
                         not last_step or step.id > last_step.id):
                 last_step = step
         if not last_step:
-            raise ValueError("No step is found that was last worked on for ticket {}".format(self.id))
+            raise ValueError(
+                f"No step is found that was last worked on for ticket {self.id}"
+            )
+
         return last_step
 
     def get_rejected_step(self):
@@ -270,7 +276,7 @@ class Ticket(XML_Object_Base):
                 if approve_reject_field.approved and not str_to_bool(approve_reject_field.approved):
                     return step
 
-        logger.debug("No step was found that was rejected for ticket {}".format(self.id))
+        logger.debug(f"No step was found that was rejected for ticket {self.id}")
         return None
 
     def get_last_worked_on_step_id(self):
@@ -286,38 +292,26 @@ class Ticket(XML_Object_Base):
             if any((task for task in step.tasks if task.status == "DONE")) and (not last_id or step.id > last_id):
                 last_id = step.id
         if not last_id:
-            raise ValueError("No ID is found for last worked on step for ticket {}".format(self.id))
+            raise ValueError(
+                f"No ID is found for last worked on step for ticket {self.id}"
+            )
+
         return last_id
 
     def is_closed(self):
-        if self.status == Ticket.CLOSED_STATUS:
-            return True
-        else:
-            return False
+        return self.status == Ticket.CLOSED_STATUS
 
     def is_cancelled(self):
-        if self.status == Ticket.CANCELLED_STATUS:
-            return True
-        else:
-            return False
+        return self.status == Ticket.CANCELLED_STATUS
 
     def is_rejected(self):
-        if self.status == Ticket.REJECTED_STATUS:
-            return True
-        else:
-            return False
+        return self.status == Ticket.REJECTED_STATUS
 
     def is_resolved(self):
-        if self.status == Ticket.RESOLVED_STATUS:
-            return True
-        else:
-            return False
+        return self.status == Ticket.RESOLVED_STATUS
 
     def is_in_progress(self):
-        if self.status == Ticket.IN_PROGRESS_STATUS:
-            return True
-        else:
-            return False
+        return self.status == Ticket.IN_PROGRESS_STATUS
 
     def get_expiry_days_left(self):
         if self.expiration_date is not None:
@@ -439,7 +433,7 @@ class Ticket_Step(XML_Object_Base):
             if task.id == task_id:
                 logger.debug("Returning task with ID '%s': '%s'", task_id, task.to_xml_string())
                 return task
-        raise ValueError("A step task with the ID {} can not be found.".format(task_id))
+        raise ValueError(f"A step task with the ID {task_id} can not be found.")
 
     def get_task_by_index(self, task_index):
         """
@@ -452,11 +446,11 @@ class Ticket_Step(XML_Object_Base):
         """
         num_of_existing_tasks = len(self.tasks)
         if num_of_existing_tasks < task_index + 1:
-            raise ValueError("A task with an index of '{}' can not be found, highest index is '{}'.".format(task_index,
-                                                                                                            num_of_existing_tasks - 1))
-        task_ids = []
-        for task in self.tasks:
-            task_ids.append(task.id)
+            raise ValueError(
+                f"A task with an index of '{task_index}' can not be found, highest index is '{num_of_existing_tasks - 1}'."
+            )
+
+        task_ids = [task.id for task in self.tasks]
         task_ids.sort()
         logger.debug("Returning task with index of '%s'", task_index)
         return self.get_task_by_id(task_ids[task_index])
@@ -474,7 +468,7 @@ class Ticket_Step(XML_Object_Base):
             if task.name == task_name:
                 logger.debug("Returning task with name '%s': '%s'", task_name, task.to_xml_string())
                 return task
-        raise ValueError("A step task with the name {} can not be found.".format(task_name))
+        raise ValueError(f"A step task with the name {task_name} can not be found.")
 
     def get_last_task(self):
         """
@@ -511,10 +505,7 @@ class Step_Field_Checkbox(Step_Field_Base):
         self.set_attrib(Attributes.XSI_TYPE, Attributes.FIELD_TYPE_CHECKBOX)
 
     def is_checked(self):
-        if self.value == "true":
-            return True
-        else:
-            return False
+        return self.value == "true"
 
     def set_checked(self):
         self.value = "true"
@@ -624,7 +615,11 @@ class Step_Field_Multi_Text(Step_Multi_Field_Base):
 
     def set_field_value(self, values):
         if isinstance(values, list):
-            values = [Text_Field(None, v) if not isinstance(v, Text_Field) else v for v in values]
+            values = [
+                v if isinstance(v, Text_Field) else Text_Field(None, v)
+                for v in values
+            ]
+
         elif not isinstance(values, Text_Field):
             values = Text_Field(None, values)
         super().set_field_value(values)
@@ -651,7 +646,7 @@ class Step_Field_Multi_Text_Area(Step_Multi_Field_Base):
 
     def set_field_value(self, values):
         if isinstance(values, list):
-            values = [Text_Area(v) if not isinstance(v, Text_Area) else v for v in values]
+            values = [v if isinstance(v, Text_Area) else Text_Area(v) for v in values]
         elif not isinstance(values, Text_Area):
             values = Text_Area(values)
         super().set_field_value(values)
@@ -664,10 +659,7 @@ class Text_Field(XML_Object_Base):
         super().__init__(Elements.TEXT_FIELD)
 
     def __str__(self):
-        if self.text:
-            return self.text
-        else:
-            return ""
+        return self.text or ""
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -682,10 +674,7 @@ class Text_Area(XML_Object_Base):
         super().__init__(Elements.TEXT_AREA)
 
     def __str__(self):
-        if self.text:
-            return self.text
-        else:
-            return ""
+        return self.text or ""
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -745,7 +734,7 @@ class Step_Field_Date(Step_Field_Base):
         self.set_attrib(Attributes.XSI_TYPE, Attributes.FIELD_TYPE_DATE)
 
     def get_xml_datetime(self):
-        return self.value + "T00:00:00"
+        return f"{self.value}T00:00:00"
 
     def get_remedy_datetime(self):
         REMEDY_DATE_FORMAT_STRING = "%Y-%m-%dT%H:%M:%SZ"
@@ -935,7 +924,7 @@ class Step_Field_Multi_Network_Object(Step_Multi_Field_Base):
             elif network_object_type == TYPE_OBJECT:
                 network_object = Network_Object_Object.from_xml_node(network_object_node)
             else:
-                raise ValueError("Unknown network object type {}.".format(network_object_type))
+                raise ValueError(f"Unknown network object type {network_object_type}.")
             network_objects.append(network_object)
 
         return cls(num_id, name, network_objects, read_only)
@@ -968,9 +957,9 @@ class Step_Field_Multi_Group_Change(Step_Multi_Field_Base):
         return cls(num_id, name, implementation_status, group_changes, read_only)
 
     def to_pretty_str(self):
-        output = "Group Change field '{}'\n:".format(self.name)
+        output = f"Group Change field '{self.name}'\n:"
         for group_change in self.group_changes:
-            output += "\n{}\n".format(group_change.to_pretty_str())
+            output += f"\n{group_change.to_pretty_str()}\n"
         return output
 
 
@@ -1005,13 +994,19 @@ class Group_Change_Node(XML_Object_Base):
                    management_id=management_id, change_action=change_action)
 
     def to_pretty_str(self):
-        pretty_string = "Modify Group Request '{}':\n".format(self.name)
-        pretty_string += "\tManagement Name: {}\n".format(self.management_name)
-        pretty_string += "\tImplementation Status: {}\n".format(self.change_implementation_status)
+        pretty_string = (
+            f"Modify Group Request '{self.name}':\n"
+            + f"\tManagement Name: {self.management_name}\n"
+        )
+
+        pretty_string += (
+            f"\tImplementation Status: {self.change_implementation_status}\n"
+        )
+
         pretty_string += "\tMembers:\n"
         for member in self.members:
             pretty_string += member.to_pretty_str()
-            pretty_string += "\n\t\tMember Status: {}\n".format(member.status)
+            pretty_string += f"\n\t\tMember Status: {member.status}\n"
         return pretty_string
 
 
@@ -1029,7 +1024,7 @@ class Multi_Target_Object(XML_Object_Base):
 
     def __str__(self):
         if all([self.object_name, self.object_details]):
-            return "{}/{}".format(self.object_name, self.object_details)
+            return f"{self.object_name}/{self.object_details}"
         else:
             return ""
 
@@ -1093,11 +1088,11 @@ class Group_Change_Member_Object(XML_Object_Base):
     def to_pretty_str(self):
         object_string = ""
         if self.management_name:
-            object_string += "\n\t\tManagement Name: {}".format(self.management_name)
+            object_string += f"\n\t\tManagement Name: {self.management_name}"
         if self.object_type:
-            object_string += "\n\t\tObject Type: {}".format(self.object_type)
+            object_string += f"\n\t\tObject Type: {self.object_type}"
         if self.object_details:
-            object_string += "\n\t\tObject Details: {}".format(self.object_details)
+            object_string += f"\n\t\tObject Details: {self.object_details}"
         return object_string
 
 
@@ -1171,9 +1166,11 @@ class Step_Field_Multi_Hyperlink(Step_Multi_Field_Base):
         num_id = get_xml_int_value(xml_node, Elements.ID)
         name = get_xml_text_value(xml_node, Elements.NAME)
         read_only = get_xml_text_value(xml_node, Elements.READ_ONLY)
-        hyperlinks = []
-        for hyperlink_node in xml_node.iter(tag=Elements.HYPERLINK):
-            hyperlinks.append(Hyperlink.from_xml_node(hyperlink_node))
+        hyperlinks = [
+            Hyperlink.from_xml_node(hyperlink_node)
+            for hyperlink_node in xml_node.iter(tag=Elements.HYPERLINK)
+        ]
+
         return cls(num_id, name, hyperlinks, read_only)
 
 
@@ -1228,15 +1225,15 @@ class Network_Object_IP_Address(Target_Base):
 
     def to_pretty_str(self):
         try:
-            return "\n\t\tIP Address: {}\n\t\tSubnet Mask: {}".format(self.ip_address, self.netmask)
+            return f"\n\t\tIP Address: {self.ip_address}\n\t\tSubnet Mask: {self.netmask}"
         except AttributeError:
-            return "\n\t\tIP Address: {}\n\t\tSubnet Mask: 255.255.255.255".format(self.ip_address)
+            return f"\n\t\tIP Address: {self.ip_address}\n\t\tSubnet Mask: 255.255.255.255"
 
     def __str__(self):
         try:
-            return "{}/{}".format(self.ip_address, self.netmask)
+            return f"{self.ip_address}/{self.netmask}"
         except AttributeError:
-            return "{}/32".format(self.ip_address)
+            return f"{self.ip_address}/32"
 
 
 class Network_Object_Object(Target_Base):
@@ -1267,20 +1264,20 @@ class Network_Object_Object(Target_Base):
         return cls(num_id, object_name, object_type, object_details, management_name, management_id, object_UID)
 
     def __str__(self):
-        return "{} {}".format(self.management_name, self.object_details)
+        return f"{self.management_name} {self.object_details}"
 
     def to_pretty_str(self):
         object_string = ""
         if self.management_name:
-            object_string += "\n\t\tManagement Name: {}".format(self.management_name)
+            object_string += f"\n\t\tManagement Name: {self.management_name}"
         if self.object_name:
-            object_string += "\n\t\tObject Name: {}".format(self.object_name)
+            object_string += f"\n\t\tObject Name: {self.object_name}"
         if self.object_details:
-            object_string += "\n\t\tObject Details: {}".format(self.object_details)
+            object_string += f"\n\t\tObject Details: {self.object_details}"
         if self.object_UID:
-            object_string += "\n\t\tObject UID: {}".format(self.object_UID)
+            object_string += f"\n\t\tObject UID: {self.object_UID}"
         if self.object_type:
-            object_string += "\n\t\tObject Type: {}".format(self.object_type)
+            object_string += f"\n\t\tObject Type: {self.object_type}"
         return object_string
 
 
@@ -1337,18 +1334,18 @@ class Network_Object_DNS_Host(Target_Base):
     def to_pretty_str(self):
         target_string = ""
         if self.ip_address:
-            target_string += "\n\t\tIP Address: {}".format(self.ip_address)
+            target_string += f"\n\t\tIP Address: {self.ip_address}"
         elif self.dns_ip_addresses:
             target_string += "\n\t\tIP Addresses: {}".format(
                 '\n\t\t\t\t\t'.join([str(ip) for ip in self.dns_ip_addresses]))
         if self.host_name:
-            target_string += "\n\t\tHostname: {}".format(self.host_name)
+            target_string += f"\n\t\tHostname: {self.host_name}"
         return target_string
 
     def __str__(self):
         if self.ip_address:
-            return "{}/{}".format(self.host_name, self.ip_address)
-        return "{}/{}".format(self.host_name, [str(ip) for ip in self.dns_ip_addresses])
+            return f"{self.host_name}/{self.ip_address}"
+        return f"{self.host_name}/{[str(ip) for ip in self.dns_ip_addresses]}"
 
 
 class Step_Task(XML_Object_Base):
@@ -1416,7 +1413,7 @@ class Step_Task(XML_Object_Base):
         for field in self.fields:
             if field.id == field_id:
                 return field
-        raise ValueError("A field with an ID of '{}' could not be found.".format(field_id))
+        raise ValueError(f"A field with an ID of '{field_id}' could not be found.")
 
     def get_field_by_index(self, field_index):
         """
@@ -1429,11 +1426,11 @@ class Step_Task(XML_Object_Base):
         """
         num_of_existing_fields = len(self.fields)
         if num_of_existing_fields < field_index + 1:
-            raise ValueError("A field with an index of '{}' can not be found, "
-                             "highest index is '{}'.".format(field_index, num_of_existing_fields - 1))
-        field_ids = []
-        for field in self.fields:
-            field_ids.append(field.id)
+            raise ValueError(
+                f"A field with an index of '{field_index}' can not be found, highest index is '{num_of_existing_fields - 1}'."
+            )
+
+        field_ids = [field.id for field in self.fields]
         field_ids.sort()
         return self.get_field_by_id(field_ids[field_index])
 
@@ -1451,9 +1448,8 @@ class Step_Task(XML_Object_Base):
             if case_sensitive:
                 if field.name == field_name:
                     field_list.append(field)
-            else:
-                if field.name.lower() == field_name.lower():
-                    field_list.append(field)
+            elif field.name.lower() == field_name.lower():
+                field_list.append(field)
 
         return field_list
 
@@ -1472,9 +1468,8 @@ class Step_Task(XML_Object_Base):
             if case_sensitive:
                 if field.name == field_name and field.get_field_type() == field_type:
                     field_list.append(field)
-            else:
-                if field.name.lower() == field_name.lower() and field.get_field_type() == field_type:
-                    field_list.append(field)
+            elif field.name.lower() == field_name.lower() and field.get_field_type() == field_type:
+                field_list.append(field)
 
         return field_list
 
@@ -1491,9 +1486,8 @@ class Step_Task(XML_Object_Base):
             if case_sensitive:
                 if field.name.strip() == field_name.strip():
                     yield field
-            else:
-                if field.name.lower().strip() == field_name.lower().strip():
-                    yield field
+            elif field.name.lower().strip() == field_name.lower().strip():
+                yield field
 
     def get_field_list_by_type(self, field_type):
         """
@@ -1503,11 +1497,7 @@ class Step_Task(XML_Object_Base):
         :return: The task fields whose types matches the specified type.
         :rtype: list[T <= Step_Field_Base]
         """
-        field_list = []
-        for field in self.fields:
-            if field.get_field_type() == field_type:
-                field_list.append(field)
-        return field_list
+        return [field for field in self.fields if field.get_field_type() == field_type]
 
     def get_fields_by_type(self, field_type):
         """
@@ -1527,24 +1517,15 @@ class Step_Task(XML_Object_Base):
 
     def is_assigned(self):
         """Check if the task is assigned"""
-        if self.status == "ASSIGNED":
-            return True
-        else:
-            return False
+        return self.status == "ASSIGNED"
 
     def is_waiting_to_be_assigned(self):
         """Check if the task is waiting to be assigned"""
-        if self.status == "WAITING_TO_BE_ASSIGNED":
-            return True
-        else:
-            return False
+        return self.status == "WAITING_TO_BE_ASSIGNED"
 
     def is_pending(self):
         """Check if the task is pending."""
-        if self.status == "PENDING":
-            return True
-        else:
-            return False
+        return self.status == "PENDING"
 
     def is_done(self):
         return self.status == "DONE"
@@ -1594,7 +1575,9 @@ class User_List(XML_List):
                 user_type = user_node.attrib[Attributes.XSI_NAMESPACE_TYPE]
             except (AttributeError, TypeError, KeyError) as error:
                 logger.error(
-                    "Failed to get the type of the User_List element. Assuming it's User. Error: {}".format(error))
+                    f"Failed to get the type of the User_List element. Assuming it's User. Error: {error}"
+                )
+
             if user_type == "group":
                 user = Group.from_xml_node(user_node)
             else:
@@ -1680,17 +1663,17 @@ class User(XML_Object_Base):
         ldapDn = get_xml_text_value(xml_node, Elements.LDAPDN)
         user_type = get_xml_text_value(xml_node, Elements.TYPE)
         groups = []
-        groups_node = get_xml_node(xml_node, Elements.MEMBER_OF, True)
-        if groups_node:
-            for group_node in groups_node.iter(tag=Elements.USER):
-                groups.append(Group.from_xml_node(group_node))
+        if groups_node := get_xml_node(xml_node, Elements.MEMBER_OF, True):
+            groups.extend(
+                Group.from_xml_node(group_node)
+                for group_node in groups_node.iter(tag=Elements.USER)
+            )
+
         roles = []
-        roles_node = get_xml_node(xml_node, Elements.ROLES, True)
-        if roles_node:
+        if roles_node := get_xml_node(xml_node, Elements.ROLES, True):
             roles = Roles.from_xml_node(roles_node)
         domains = []
-        domains_node = get_xml_node(xml_node, Elements.DOMAINS, True)
-        if domains_node:
+        if domains_node := get_xml_node(xml_node, Elements.DOMAINS, True):
             domains = Domains.from_xml_node(domains_node)
 
         auth_method = get_xml_text_value(xml_node, Elements.AUTHENTICATION_METHOD)
@@ -1731,9 +1714,11 @@ class Group_Permissions(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        group_permissions = []
-        for permission_node in xml_node.iter(tag=Elements.GROUPPERMISSION):
-            group_permissions.append(Group_Permission.from_xml_node(permission_node))
+        group_permissions = [
+            Group_Permission.from_xml_node(permission_node)
+            for permission_node in xml_node.iter(tag=Elements.GROUPPERMISSION)
+        ]
+
         return cls(group_permissions)
 
 
@@ -1762,9 +1747,11 @@ class Members(XML_List):
     @classmethod
     def from_xml_node(cls, xml_node):
         partial_list = get_xml_text_value(xml_node, Elements.PARTIAL_LIST)
-        members_list = []
-        for user_node in xml_node.iter(tag=Elements.USER):
-            members_list.append(Member_User.from_xml_node(user_node))
+        members_list = [
+            Member_User.from_xml_node(user_node)
+            for user_node in xml_node.iter(tag=Elements.USER)
+        ]
+
         members_list.sort(key=lambda member: member.id)
         return cls(members_list, partial_list)
 
@@ -1805,19 +1792,18 @@ class Group(XML_Object_Base):
         notes = get_xml_text_value(xml_node, Elements.NOTES)
         user_type = get_xml_text_value(xml_node, Elements.TYPE)
         ldapDn = get_xml_text_value(xml_node, Elements.LDAPDN)
-        g_permission_node = get_xml_node(xml_node, Elements.GROUPPERMISSIONS, True)
-        if g_permission_node:
+        if g_permission_node := get_xml_node(
+            xml_node, Elements.GROUPPERMISSIONS, True
+        ):
             group_permission = Group_Permissions.from_xml_node(g_permission_node)
         else:
             group_permission = None
 
-        members_node = get_xml_node(xml_node, Elements.MEMBERS, True)
-        if members_node:
+        if members_node := get_xml_node(xml_node, Elements.MEMBERS, True):
             members = Members.from_xml_node(members_node)
         else:
             members = []
-        roles_node = get_xml_node(xml_node, Elements.ROLES, True)
-        if roles_node:
+        if roles_node := get_xml_node(xml_node, Elements.ROLES, True):
             roles = Roles.from_xml_node(roles_node)
         else:
             roles = []
@@ -1849,9 +1835,11 @@ class Roles(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        roles_list = []
-        for role_node in xml_node.iter(tag=Elements.ROLE):
-            roles_list.append(Role.from_xml_node(role_node))
+        roles_list = [
+            Role.from_xml_node(role_node)
+            for role_node in xml_node.iter(tag=Elements.ROLE)
+        ]
+
         return cls(roles_list)
 
 
@@ -1879,9 +1867,11 @@ class Domains(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        domains = []
-        for domain_node in xml_node.iter(tag=Elements.DOMAIN):
-            domains.append(Domain.from_xml_node(domain_node))
+        domains = [
+            Domain.from_xml_node(domain_node)
+            for domain_node in xml_node.iter(tag=Elements.DOMAIN)
+        ]
+
         return cls(domains)
 
 
@@ -1925,9 +1915,13 @@ class Ticket_History_Activities(XML_List):
         :type xml_node: xml.etree.Element
         """
         ticket_id = get_xml_int_value(xml_node, Elements.TICKET_ID)
-        history_activities = []
-        for history_activity_node in xml_node.iter(tag=Elements.TICKET_HISTORY_ACTIVITY):
-            history_activities.append(Ticket_History_Activity.from_xml_node(history_activity_node))
+        history_activities = [
+            Ticket_History_Activity.from_xml_node(history_activity_node)
+            for history_activity_node in xml_node.iter(
+                tag=Elements.TICKET_HISTORY_ACTIVITY
+            )
+        ]
+
         return cls(ticket_id, history_activities)
 
     def sort(self):
@@ -1959,8 +1953,7 @@ class Ticket_History_Activities(XML_List):
                 step_durations[step] = convert_timedelta_to_seconds(
                     step_times[step]["end"] - step_times[step]["start"]) / time_unit_in_seconds
             except KeyError:
-                logger.error("Failed to get step duration for step name '{}'".format(step))
-                pass
+                logger.error(f"Failed to get step duration for step name '{step}'")
         return step_durations
 
     def get_step_states(self):
@@ -1970,8 +1963,10 @@ class Ticket_History_Activities(XML_List):
             try:
                 step_state = definitions.Ticket_Activity.find_matching_state(history_item.description)
             except ValueError:
-                logger.debug("Step: {}, state: '{}'  was not found - ignoring it".format(step_name,
-                                                                                         history_item.description))
+                logger.debug(
+                    f"Step: {step_name}, state: '{history_item.description}'  was not found - ignoring it"
+                )
+
                 continue
             step_states[step_name] = step_state
         return step_states
@@ -2020,7 +2015,7 @@ class Ticket_History_Activity(XML_Object_Base):
         elif len(self.date) == Ticket_History_Activity.OTHER_OTHER_DATE_STRING_LENGTH:
             return datetime.datetime.strptime(time_string, Ticket_History_Activity.OTHER_OTHER_DATE_FORMAT_STRING)
         else:
-            raise ValueError("Unknown date string format: {}".format(self.date))
+            raise ValueError(f"Unknown date string format: {self.date}")
 
     def as_time_obj_with_tz(self):
         dt = self.as_time_obj()

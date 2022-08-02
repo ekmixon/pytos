@@ -27,9 +27,11 @@ class Zone_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        zones = []
-        for zone_node in xml_node.iter(Elements.ZONE):
-            zones.append(Zone.from_xml_node(zone_node))
+        zones = [
+            Zone.from_xml_node(zone_node)
+            for zone_node in xml_node.iter(Elements.ZONE)
+        ]
+
         return cls(zones)
 
 
@@ -102,9 +104,11 @@ class Zone_Entries_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        zone_entries = []
-        for zone_entry_node in xml_node.iter(Elements.ZONE_ENTRY):
-            zone_entries.append(Zone_Entry.from_xml_node(zone_entry_node))
+        zone_entries = [
+            Zone_Entry.from_xml_node(zone_entry_node)
+            for zone_entry_node in xml_node.iter(Elements.ZONE_ENTRY)
+        ]
+
         return cls(zone_entries)
 
 
@@ -140,11 +144,11 @@ class Zone_Entry(XML_Object_Base, Comparable, IPNetworkMixin):
         return cls(item_id, comment, ip, None, netmask, zone_id)
 
     def _get_ip_network(self):
-        if not self.netmask:
-            ip_network = netaddr.IPNetwork(self.ip)
-        else:
-            ip_network = netaddr.IPNetwork(str(self.ip) + "/" + str(self.netmask))
-        return ip_network
+        return (
+            netaddr.IPNetwork(f"{str(self.ip)}/{str(self.netmask)}")
+            if self.netmask
+            else netaddr.IPNetwork(self.ip)
+        )
 
     def _key(self):
         return self.id, self.zoneId
@@ -153,7 +157,7 @@ class Zone_Entry(XML_Object_Base, Comparable, IPNetworkMixin):
         return "Zone_Entry({id},{comment},{ip},{netmask},{zoneId})".format(**self.__dict__)
 
     def __str__(self):
-        return "{}/{}".format(self.ip, self.netmask)
+        return f"{self.ip}/{self.netmask}"
 
 
 class ZoneDescendantsList(XML_List):
@@ -168,9 +172,11 @@ class ZoneDescendantsList(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        zones = []
-        for zone_node in xml_node.iterfind(Elements.ZONE):
-            zones.append(ZoneDescendants.from_xml_node(zone_node))
+        zones = [
+            ZoneDescendants.from_xml_node(zone_node)
+            for zone_node in xml_node.iterfind(Elements.ZONE)
+        ]
+
         return cls(zones)
 
 
@@ -250,10 +256,11 @@ class Device_Zones_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        device_zones = []
+        device_zones = [
+            Device_Zone.from_xml_node(device_zone_node)
+            for device_zone_node in xml_node.iter(tag=Elements.DEVICE_ZONE)
+        ]
 
-        for device_zone_node in xml_node.iter(tag=Elements.DEVICE_ZONE):
-            device_zones.append(Device_Zone.from_xml_node(device_zone_node))
 
         return cls(device_zones)
 

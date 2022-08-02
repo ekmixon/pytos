@@ -126,14 +126,15 @@ class MatrixCellViolation(XML_Object_Base, metaclass=SubclassWithIdentifierRegis
         try:
             matrix_cell_type = xml_node.attrib[Attributes.XSI_NAMESPACE_TYPE]
         except KeyError:
-            msg = 'XML node is missing the XSI attribute "{}"'.format(Attributes.XSI_NAMESPACE_TYPE)
+            msg = f'XML node is missing the XSI attribute "{Attributes.XSI_NAMESPACE_TYPE}"'
+
             logger.error(msg)
             raise ValueError(msg)
         else:
             try:
                 return cls.registry[matrix_cell_type](xml_node)
             except KeyError:
-                logger.error('Unknown binding object type "{}"'.format(matrix_cell_type))
+                logger.error(f'Unknown binding object type "{matrix_cell_type}"')
 
 
 class RestrictedCellViolation(MatrixCellViolation):
@@ -203,12 +204,15 @@ class BlockedOnlyCellViolation(BlockedCellViolation):
 class ViolationNetworkObjectMetaclass(type):
     def __init__(cls, name, bases, dct):
         if not hasattr(cls, 'registry'):
-            cls.registry = {Elements.SOURCE: dict(),
-                            Elements.DESTINATION: dict(),
-                            Elements.FLOW_SOURCE: dict(),
-                            Elements.FLOW_DESTINATION: dict(),
-                            Elements.ALLOWED_SERVICE: dict(),
-                            Elements.NOT_ALLOWED_SERVICE: dict()}
+            cls.registry = {
+                Elements.SOURCE: {},
+                Elements.DESTINATION: {},
+                Elements.FLOW_SOURCE: {},
+                Elements.FLOW_DESTINATION: {},
+                Elements.ALLOWED_SERVICE: {},
+                Elements.NOT_ALLOWED_SERVICE: {},
+            }
+
         else:
             try:
                 if dct["element"] == Elements.SOURCE:
@@ -243,19 +247,17 @@ class ViolationNetworkObject(XML_Object_Base, metaclass=ViolationNetworkObjectMe
             try:
                 object_type = xml_node.attrib[xml_tags.TYPE_ATTRIB]
             except KeyError:
-                # a workaround a bug. Some object types (such as Internet) have no xsi:type or type.
-                # Checking these based on their "name" tag
                 if xml_node.find('name').text.lower() == Attributes.INTERNET.lower():
                     return cls.registry[xml_node.tag][Attributes.INTERNET].from_xml_node(xml_node)
-                else:
-                    msg = 'XML node is missing the XSI attribute "{}"'.format(Attributes.XSI_NAMESPACE_TYPE)
-                    logger.error(msg)
-                    raise ValueError(msg)
+                msg = f'XML node is missing the XSI attribute "{Attributes.XSI_NAMESPACE_TYPE}"'
+
+                logger.error(msg)
+                raise ValueError(msg)
         else:
             try:
                 return cls.registry[xml_node.tag][violation_type].from_xml_node(xml_node)
             except KeyError:
-                logger.error('Unknown violation object type "{}"'.format(violation_type))
+                logger.error(f'Unknown violation object type "{violation_type}"')
 
 
 class Violation_Any_Service(ViolationNetworkObject):

@@ -11,14 +11,15 @@ class AbsNetwork(XML_Object_Base, metaclass=SubclassWithIdentifierRegistry):
         try:
             network_type = xml_node.attrib[Attributes.XSI_NAMESPACE_TYPE]
         except KeyError:
-            msg = 'XML node is missing the XSI attribute "{}"'.format(Attributes.XSI_NAMESPACE_TYPE)
+            msg = f'XML node is missing the XSI attribute "{Attributes.XSI_NAMESPACE_TYPE}"'
+
             logger.error(msg)
             raise ValueError(msg)
         else:
             try:
                 return cls.registry[network_type](xml_node)
             except KeyError:
-                logger.error('Unknown violation object type "{}"'.format(network_type))
+                logger.error(f'Unknown violation object type "{network_type}"')
 
 
 class NetworkObject(AbsNetwork):
@@ -37,10 +38,7 @@ class NetworkObject(AbsNetwork):
         self.ip_type = get_xml_text_value(xml_node, Elements.IP_TYPE)
         self.id = get_xml_text_value(xml_node, Elements.ID)
         zone_node = get_xml_node(xml_node, Elements.ZONE, True)
-        if zone_node is not None:
-            self.zone = PolicyZone(zone_node)
-        else:
-            self.zone = None
+        self.zone = PolicyZone(zone_node) if zone_node is not None else None
         self.device_id = get_xml_int_value(xml_node, Elements.DEVICE_ID)
         admin_domain_node = get_xml_node(xml_node, Elements.ADMIN_DOMAIN, True)
         if admin_domain_node is not None:
@@ -104,7 +102,7 @@ class SubnetNetworkObject(NetworkObject):
         self.set_attrib(Attributes.XSI_TYPE, Attributes.SUBNET_NETWORK_OBJECT)
 
     def __str__(self):
-        return "{}/{}".format(self.ip, self.subnet_mask)
+        return f"{self.ip}/{self.subnet_mask}"
 
 
 class RangeNetworkObject(NetworkObject):
@@ -117,7 +115,7 @@ class RangeNetworkObject(NetworkObject):
         self.max_ip = get_xml_text_value(xml_node, Elements.MAX_IP)
 
     def __str__(self):
-        return self.min_ip + '-' + self.max_ip
+        return f'{self.min_ip}-{self.max_ip}'
 
 
 class NetworkObjectGroup(NetworkObject):
@@ -125,13 +123,15 @@ class NetworkObjectGroup(NetworkObject):
     class_identifier = Attributes.NETWORK_OBJECT_GROUP
 
     def __init__(self, xml_node):
-        self.members = []
-        for member_node in xml_node.iter(tag=Elements.MEMBER):
-            self.members.append(NetworkObject.from_xml_node(member_node))
+        self.members = [
+            NetworkObject.from_xml_node(member_node)
+            for member_node in xml_node.iter(tag=Elements.MEMBER)
+        ]
 
-        self.exclusions = []
-        for member_node in xml_node.iter(tag=Elements.EXCLUSION):
-            self.exclusions.append(NetworkObject.from_xml_node(member_node))
+        self.exclusions = [
+            NetworkObject.from_xml_node(member_node)
+            for member_node in xml_node.iter(tag=Elements.EXCLUSION)
+        ]
 
         super().__init__(xml_node, xml_node.find('.').tag)
         self.set_attrib(Attributes.XSI_TYPE, Attributes.NETWORK_OBJECT_GROUP)
@@ -161,22 +161,27 @@ class HostNetworkObjectWithInterfaces(NetworkObject):
         self.set_attrib(Attributes.XSI_TYPE, Attributes.HOST_NETWORK_OBJECT_WITH_INTERFACES)
         self.ip = get_xml_text_value(xml_node, Elements.IP)
         self.subnet_mask = get_xml_text_value(xml_node, Elements.SUBNET_MASK)
-        self.interfaces = []
-        for member_node in xml_node.iter(tag=Elements.INTERFACE_FOR_NETWORK_OBJECT):
-            self.interfaces.append(NetworkObject.from_xml_node(member_node))
+        self.interfaces = [
+            NetworkObject.from_xml_node(member_node)
+            for member_node in xml_node.iter(
+                tag=Elements.INTERFACE_FOR_NETWORK_OBJECT
+            )
+        ]
 
 
 class CloudSecurityGroup(NetworkObject):
     class_identifier = Attributes.CLOUD_SECURITY_GROUP_NETWORK_OBJECT
 
     def __init__(self, xml_node):
-        self.members = []
-        for member_node in xml_node.iter(tag=Elements.MEMBER):
-            self.members.append(NetworkObject.from_xml_node(member_node))
+        self.members = [
+            NetworkObject.from_xml_node(member_node)
+            for member_node in xml_node.iter(tag=Elements.MEMBER)
+        ]
 
-        self.exclusions = []
-        for member_node in xml_node.iter(tag=Elements.EXCLUSION):
-            self.exclusions.append(NetworkObject.from_xml_node(member_node))
+        self.exclusions = [
+            NetworkObject.from_xml_node(member_node)
+            for member_node in xml_node.iter(tag=Elements.EXCLUSION)
+        ]
 
         super().__init__(xml_node, xml_node.find('.').tag)
         self.set_attrib(Attributes.XSI_TYPE, Attributes.CLOUD_SECURITY_GROUP_NETWORK_OBJECT)
@@ -200,14 +205,15 @@ class AbsService(XML_Object_Base, metaclass=SubclassWithIdentifierRegistry):
         try:
             service_type = xml_node.attrib[Attributes.XSI_NAMESPACE_TYPE]
         except KeyError:
-            msg = 'XML node is missing the XSI attribute "{}"'.format(Attributes.XSI_NAMESPACE_TYPE)
+            msg = f'XML node is missing the XSI attribute "{Attributes.XSI_NAMESPACE_TYPE}"'
+
             logger.error(msg)
             raise ValueError(msg)
         else:
             try:
                 return cls.registry[service_type](xml_node)
             except KeyError:
-                logger.error('Unknown violation object type "{}"'.format(service_type))
+                logger.error(f'Unknown violation object type "{service_type}"')
 
 
 class Service(AbsService):
@@ -321,14 +327,15 @@ class Binding(XML_Object_Base, metaclass=SubclassWithIdentifierRegistry):
         try:
             binding_type = xml_node.attrib[Attributes.XSI_NAMESPACE_TYPE]
         except KeyError:
-            msg = 'XML node is missing the XSI attribute "{}"'.format(Attributes.XSI_NAMESPACE_TYPE)
+            msg = f'XML node is missing the XSI attribute "{Attributes.XSI_NAMESPACE_TYPE}"'
+
             logger.error(msg)
             raise ValueError(msg)
         else:
             try:
                 return cls.registry[binding_type](xml_node)
             except KeyError:
-                logger.error('Unknown binding object type "{}"'.format(binding_type))
+                logger.error(f'Unknown binding object type "{binding_type}"')
 
 
 class AclBinding(Binding):
@@ -375,14 +382,15 @@ class AbsSlimRule(XML_Object_Base, metaclass=SubclassWithIdentifierRegistry):
         try:
             rule_type = xml_node.attrib[Attributes.XSI_NAMESPACE_TYPE]
         except KeyError:
-            msg = 'XML node is missing the XSI attribute "{}"'.format(Attributes.XSI_NAMESPACE_TYPE)
+            msg = f'XML node is missing the XSI attribute "{Attributes.XSI_NAMESPACE_TYPE}"'
+
             logger.error(msg)
             raise ValueError(msg)
         else:
             try:
                 return cls.registry[rule_type].from_xml_node(xml_node)
             except KeyError:
-                logger.error('Unknown binding object type "{}"'.format(rule_type))
+                logger.error(f'Unknown binding object type "{rule_type}"')
 
 
 class SlimRule(AbsSlimRule):
@@ -482,11 +490,7 @@ class SlimRule(AbsSlimRule):
                 users.append(user)
 
         track_node = get_xml_node(xml_node, Elements.TRACK, True)
-        if track_node is not None:
-            track = RuleTrack.from_xml_node(track_node)
-        else:
-            track = None
-
+        track = RuleTrack.from_xml_node(track_node) if track_node is not None else None
         source_services = []
         for source_service_node in xml_node.iter(Elements.SOURCESERVICES):
             service = Service.from_xml_node(source_service_node)
@@ -497,14 +501,18 @@ class SlimRule(AbsSlimRule):
                    users, track, source_services, from_zone, to_zone, action, comment, name, is_disabled)
 
     def to_pretty_str(self):
-        rule_string = "Rule name: {}\n".format(self.name)
-        rule_string += "From zone: {}\n".format(self.from_zone)
-        rule_string += "To zone: {}\n".format(self.to_zone)
-        rule_string += "Sources: {}\n".format(", ".join(str(src) for src in self.sourceNetworks))
-        rule_string += "Destinations: {}\n".format(", ".join(str(src) for src in self.destinationNetworks))
-        rule_string += "Services: {}\n".format(", ".join(str(srv) for srv in self.destination_services))
+        rule_string = f"Rule name: {self.name}\n" + f"From zone: {self.from_zone}\n"
+        rule_string += f"To zone: {self.to_zone}\n"
+        rule_string += (
+            f'Sources: {", ".join((str(src) for src in self.sourceNetworks))}\n'
+        )
+
+        rule_string += f'Destinations: {", ".join((str(src) for src in self.destinationNetworks))}\n'
+
+        rule_string += f'Services: {", ".join((str(srv) for srv in self.destination_services))}\n'
+
         if self.comment is not None:
-            rule_string += "Comment: {}\n".format(unescape(self.comment))
+            rule_string += f"Comment: {unescape(self.comment)}\n"
         return rule_string
 
 
@@ -591,27 +599,28 @@ class RuleMetaData(XML_Object_Base):
     def to_pretty_str(self):
         meta_data_string = ''
         if self.violations is not None:
-            meta_data_string += "Violations: {}\n".format(self.violations)
+            meta_data_string += f"Violations: {self.violations}\n"
         if self.permissiveness_level is not None:
-            meta_data_string += "Permissiveness level: {}\n".format(self.permissiveness_level)
+            meta_data_string += f"Permissiveness level: {self.permissiveness_level}\n"
         if self.legacy_rule is not None:
-            meta_data_string += "Legacy rule: {}\n".format(self.legacy_rule)
+            meta_data_string += f"Legacy rule: {self.legacy_rule}\n"
         if self.ticket_ids is not None:
-            meta_data_string += "Ticket IDs: {}\n".format(self.ticket_ids)
+            meta_data_string += f"Ticket IDs: {self.ticket_ids}\n"
         if self.tech_owner is not None:
-            meta_data_string += "Tech Owner: {}\n".format(self.tech_owner)
+            meta_data_string += f"Tech Owner: {self.tech_owner}\n"
         if self.last_hit is not None:
-            meta_data_string += "Last hit: {}\n".format(self.last_hit)
+            meta_data_string += f"Last hit: {self.last_hit}\n"
         if self.rule_description is not None:
-            meta_data_string += "Rule description: {}\n".format(self.rule_description)
+            meta_data_string += f"Rule description: {self.rule_description}\n"
         if self.business_owners is not None:
-            meta_data_string += "Business owners: {}\n".format(self.business_owners)
+            meta_data_string += f"Business owners: {self.business_owners}\n"
         if self.last_modified is not None:
-            meta_data_string += "Last modified: {}\n".format(self.last_modified)
+            meta_data_string += f"Last modified: {self.last_modified}\n"
         if self.shadowed_status is not None:
-            meta_data_string += "Shadowed status: {}\n".format(self.shadowed_status)
+            meta_data_string += f"Shadowed status: {self.shadowed_status}\n"
         if self.applications:
-            meta_data_string += "Applications: {}\n".format(", ".join(str(app) for app in self.applications))
+            meta_data_string += f'Applications: {", ".join((str(app) for app in self.applications))}\n'
+
         return meta_data_string
 
 

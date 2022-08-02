@@ -70,14 +70,16 @@ class Secure_Track_Helper(Secure_API_Helper):
         logger.info("Getting SecureTrack devices list.")
 
         if custom_params:
-            params = '&'.join('{}={}'.format(k, v) for k, v in custom_params.items())
-            params = '?' + params
+            params = '&'.join(f'{k}={v}' for k, v in custom_params.items())
+            params = f'?{params}'
         else:
             params = ''
 
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}".format(params),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{params}", expected_status_codes=200
+            ).response.content
+
         except RequestException:
             message = "Failed to GET devices list."
             logger.critical(message)
@@ -96,14 +98,16 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Getting SecureTrack device with ID %s.", device_id)
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}", expected_status_codes=200
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET device with ID {}.".format(device_id)
+            message = f"Failed to GET device with ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         return Device.from_xml_string(response_string)
@@ -130,10 +134,12 @@ class Secure_Track_Helper(Secure_API_Helper):
             rule_documentation_uri_suffix = ""
         try:
             response_string = self.get_uri(
-                "/securetrack/api/devices/{}/rules/{}{}".format(device_id, rule_id, rule_documentation_uri_suffix),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/devices/{device_id}/rules/{rule_id}{rule_documentation_uri_suffix}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to GET device with ID {}.".format(device_id)
+            message = f"Failed to GET device with ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         return Rules_List.from_xml_string(response_string)
@@ -150,14 +156,17 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Getting SecureTrack revisions for device with ID %s.", device_id)
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}/revisions/".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}/revisions/",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET device with ID {}.".format(device_id)
+            message = f"Failed to GET device with ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         return Device_Revisions_List.from_xml_string(response_string)
@@ -172,28 +181,29 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If a device with the specified ID does not exist.
         :raise IOError: If there was a communication problem trying to get the device.
         """
-        hard_coded_checksum_string = b"Cryptochecksum:0123456789ABCDEF]]></"
         logger.info("Getting SecureTrack device with ID '%s'.", device_id)
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}/config".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}/config",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET configuration for device with ID {}.".format(device_id)
+            message = f"Failed to GET configuration for device with ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         device_config_xml_string = bytes(response_string)
         if device_config_xml_string:
             device_config_xml_string = device_config_xml_string.replace(
                     b"<" + bytes(Elements.DEVICE_CONFIG, encoding="ascii") + b"><![CDATA[", b"")
+            hard_coded_checksum_string = b"Cryptochecksum:0123456789ABCDEF]]></"
             device_config_xml_string = device_config_xml_string.replace(
                     hard_coded_checksum_string + bytes(Elements.DEVICE_CONFIG, encoding="ascii") + b">\n", b"")
-            return device_config_xml_string
-        else:
-            return device_config_xml_string
+        return device_config_xml_string
 
     def get_device_id_by_name(self, device_name):
         """Get the device ID for a device by name
@@ -209,19 +219,18 @@ class Secure_Track_Helper(Secure_API_Helper):
         devices_list = self.get_devices_list()
         for device in devices_list:
             if device.name == device_name:
-                if not match_device:
-                    match_device = device
-                else:
-                    message = "More than one device with the name '{}' exists. (Device IDs are {},{})".format(
-                        device_name, match_device.id, device.id)
+                if match_device:
+                    message = f"More than one device with the name '{device_name}' exists. (Device IDs are {match_device.id},{device.id})"
+
                     logger.error(message)
                     raise IndexError(message)
-        if not match_device:
-            message = "A device with the name '{}' does not exist.".format(device_name)
-            logger.error(message)
-            raise ValueError(message)
-        else:
+                else:
+                    match_device = device
+        if match_device:
             return match_device.id
+        message = f"A device with the name '{device_name}' does not exist."
+        logger.error(message)
+        raise ValueError(message)
 
     def get_device_by_name(self, device_name):
         """Get a configured SecureTrack device by ID.
@@ -235,24 +244,27 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Getting SecureTrack device with name %s.", device_name)
         try:
-            response_string = self.get_uri("/securetrack/api/devices?name={}".format(device_name),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices?name={device_name}",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Device {} does not exist.".format(device_name)
+            message = f"Device {device_name} does not exist."
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET device {}.".format(device_name)
+            message = f"Failed to GET device {device_name}."
             logger.critical(message)
             raise IOError(message)
         found_devices = [device for device in Devices_List.from_xml_string(response_string) if
                          device.name.lower() == device_name.lower()]
         if not found_devices:
-            message = "Device {} does not exist.".format(device_name)
+            message = f"Device {device_name} does not exist."
             logger.critical(message)
             raise ValueError(message)
         elif len(found_devices) > 1:
-            message = "Multiple devices with name '{}' found".format(device_name)
+            message = f"Multiple devices with name '{device_name}' found"
             logger.critical(message)
             raise ValueError(message)
         return found_devices[0]
@@ -264,12 +276,15 @@ class Secure_Track_Helper(Secure_API_Helper):
         :type domain_id: int|str
         :return: GenericDevicesList
         """
-        logger.debug("Getting the list of the generic device for domain {}".format(domain_id))
+        logger.debug(f"Getting the list of the generic device for domain {domain_id}")
         try:
-            response_string = self.get_uri("/securetrack/api/generic_devices?context={}".format(domain_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/generic_devices?context={domain_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to GET generic devices on domain {}.".format(domain_id)
+            message = f"Failed to GET generic devices on domain {domain_id}."
             logger.critical(message)
             raise IOError(message)
         return GenericDevicesList.from_xml_string(response_string)
@@ -283,19 +298,26 @@ class Secure_Track_Helper(Secure_API_Helper):
         :type domain_id: int|str
         :return: GenericDevice
         """
-        logger.debug("Getting generic device with name '{}' on domain {}".format(generic_device_name, domain_id))
+        logger.debug(
+            f"Getting generic device with name '{generic_device_name}' on domain {domain_id}"
+        )
+
         try:
             response_string = self.get_uri(
-                "/securetrack/api/generic_devices?name={}&context={}".format(generic_device_name, domain_id),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/generic_devices?name={generic_device_name}&context={domain_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to GET generic device with name '{}' on domain {}.".format(generic_device_name, domain_id)
+            message = f"Failed to GET generic device with name '{generic_device_name}' on domain {domain_id}."
+
             logger.critical(message)
             raise IOError(message)
         try:
             return GenericDevicesList.from_xml_string(response_string)[0]
         except IndexError:
-            msg = "Generic device with name '{}' on domain {} is not found".format(generic_device_name, domain_id)
+            msg = f"Generic device with name '{generic_device_name}' on domain {domain_id} is not found"
+
             logger.error(msg)
             raise ValueError(msg)
 
@@ -324,11 +346,11 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Creating SecureTrack device.")
         if vendor not in DEVICE_TYPES:
-            message = "Unknown vendor '{}'.".format(vendor)
+            message = f"Unknown vendor '{vendor}'."
             logger.error(message)
             raise ValueError(message)
         if model not in DEVICE_TYPES[vendor]:
-            message = "Unknown model '{}' for vendor '{}'.".format(model, vendor)
+            message = f"Unknown model '{model}' for vendor '{vendor}'."
             logger.error(message)
             raise ValueError(message)
 
@@ -340,8 +362,10 @@ class Secure_Track_Helper(Secure_API_Helper):
             try:
                 domain_name = self.get_domain_by_id(domain_id).name
             except (ValueError, IOError, REST_HTTP_Exception, AttributeError) as error:
-                logger.debug("Failed to get domain with ID {} for new device, setting to default. Error: {}".format(
-                             domain_id, error))
+                logger.debug(
+                    f"Failed to get domain with ID {domain_id} for new device, setting to default. Error: {error}"
+                )
+
                 domain_name = "Default"
 
         if not domain_id and not domain_name:
@@ -350,14 +374,13 @@ class Secure_Track_Helper(Secure_API_Helper):
         device = Device(model, vendor, domain_id, domain_name, None, name, offline, topology)
         try:
             response = self.post_uri("/securetrack/api/devices/", device.to_xml_string(), expected_status_codes=201)
-            device_id = response.get_created_item_id()
-            return device_id
+            return response.get_created_item_id()
         except RequestException:
             message = "Failed to create device."
             logger.critical(message)
             raise IOError(message)
         except REST_Bad_Request_Error as http_exception:
-            message = "Could not create device, got error: '{}'".format(http_exception)
+            message = f"Could not create device, got error: '{http_exception}'"
             logger.critical(message)
             raise ValueError(message)
 
@@ -374,18 +397,24 @@ class Secure_Track_Helper(Secure_API_Helper):
             try:
                 device.domain_name = self.get_domain_by_id(device.domain_id).name
             except (ValueError, IOError, REST_HTTP_Exception, AttributeError) as error:
-                logger.debug("Failed to get domain with ID {} for new device, setting to default. Error: {}".format(
-                             device.domain_id, error))
+                logger.debug(
+                    f"Failed to get domain with ID {device.domain_id} for new device, setting to default. Error: {error}"
+                )
+
                 device.domain_name = "Default"
         try:
-            self.put_uri("/securetrack/api/devices/{}".format(device.id),
-                         device.to_xml_string(), expected_status_codes=[200, 201])
+            self.put_uri(
+                f"/securetrack/api/devices/{device.id}",
+                device.to_xml_string(),
+                expected_status_codes=[200, 201],
+            )
+
         except RequestException:
             message = "Failed to update device."
             logger.critical(message)
             raise IOError(message)
         except REST_Bad_Request_Error as http_exception:
-            message = "Could not update device, got error: '{}'".format(http_exception)
+            message = f"Could not update device, got error: '{http_exception}'"
             logger.critical(message)
             raise ValueError(message)
 
@@ -406,14 +435,14 @@ class Secure_Track_Helper(Secure_API_Helper):
             response = self.post_uri("/securetrack/api/tasks/add_device_config_task",
                                      multi_part_form_params=multi_part_form_dict, expected_status_codes=201)
             logger.info("Upload successful.")
-            config_upload_task_id = response.get_created_item_id()
-            return config_upload_task_id
+            return response.get_created_item_id()
         except RequestException:
-            message = "Failed to upload offline configuration for device ID {}".format(device_id)
+            message = f"Failed to upload offline configuration for device ID {device_id}"
             logger.critical(message)
             raise IOError(message)
         except REST_Bad_Request_Error as http_exception:
-            message = "Could not upload offline device configuration, got error: '{}'.".format(http_exception)
+            message = f"Could not upload offline device configuration, got error: '{http_exception}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -438,20 +467,23 @@ class Secure_Track_Helper(Secure_API_Helper):
         if start_rule_num is not None:
             logger.info("Getting shadowed rules for device ID '%s', start rule is '%s', rule count is '%s'", device_id,
                         start_rule_num, rule_count)
-            params_string = "&start={}&count={}".format(start_rule_num, rule_count)
+            params_string = f"&start={start_rule_num}&count={rule_count}"
         else:
             params_string = ""
             logger.info("Getting shadowed rules for device ID '%s'", device_id)
         try:
             response_string = self.get_uri(
-                "/securetrack/api/devices/{}/cleanups?code=C01{}".format(device_id, params_string),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/devices/{device_id}/cleanups?code=C01{params_string}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of shadowed rules for device ID {}.".format(device_id)
+            message = f"Failed to get the list of shadowed rules for device ID {device_id}."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Cleanup_Set.from_xml_string(response_string)
@@ -470,14 +502,18 @@ class Secure_Track_Helper(Secure_API_Helper):
             device_id = ",".join(device_id)
         logger.info("Getting shadowed rules for device ID '%s'", device_id)
         try:
-            response_string = self.get_uri("/securetrack/api/cleanups?devices={}".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/cleanups?devices={device_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of shadowed rules for device ID {}.".format(device_id)
+            message = f"Failed to get the list of shadowed rules for device ID {device_id}."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Generic_Cleanup_List.from_xml_string(response_string)
@@ -499,14 +535,17 @@ class Secure_Track_Helper(Secure_API_Helper):
             rule_uids = ",".join(rule_uids)
         try:
             response_string = self.get_uri(
-                "/securetrack/api/devices/{}/shadowing_rules?shadowed_uids={}".format(device_id, rule_uids),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/devices/{device_id}/shadowing_rules?shadowed_uids={rule_uids}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of shadowed rules for device ID {}.".format(device_id)
+            message = f"Failed to get the list of shadowed rules for device ID {device_id}."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         except REST_Request_URI_Too_Long:
@@ -522,24 +561,31 @@ class Secure_Track_Helper(Secure_API_Helper):
         :param context: Domain ID
         :return: List collection of effected devices
         """
-        logger.info("Getting devices by: Search text: {}, context: {}".format(search_text, context))
+        logger.info(
+            f"Getting devices by: Search text: {search_text}, context: {context}"
+        )
+
         search_str = ""
         if search_text is not None:
             if isinstance(search_text, dict):
-                search_params = ",".join(["{}:{}".format(key, value) for key, value in search_text.items()])
+                search_params = ",".join(
+                    [f"{key}:{value}" for key, value in search_text.items()]
+                )
+
             else:
                 search_params = search_text
-            search_str = "search_text={}".format(search_params)
-        context_str = "context={}".format(context) if context else ""
-        url = "/securetrack/api/rule_search?{}{}".format(search_str, context_str)
+            search_str = f"search_text={search_params}"
+        context_str = f"context={context}" if context else ""
+        url = f"/securetrack/api/rule_search?{search_str}{context_str}"
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except RequestException:
-            message = "Failed to get device list for search text: {} and context: {}".format(search_text, context)
+            message = f"Failed to get device list for search text: {search_text} and context: {context}"
+
             logger.critical(message)
             raise IOError(message)
         except REST_Bad_Request_Error:
-            message = "Failed to find devices for search string '{}'".format(search_str)
+            message = f"Failed to find devices for search string '{search_str}'"
             logger.critical(message)
             raise ValueError(message)
         return RuleSearchDeviceList.from_xml_string(response_string)
@@ -560,33 +606,36 @@ class Secure_Track_Helper(Secure_API_Helper):
         :return: The rules for device based on the search context
         :rtype: Rules_List
         """
-        logger.info("Getting rules for device {}. Search text: {}, context: {}".format(device_id, search_text, context))
+        logger.info(
+            f"Getting rules for device {device_id}. Search text: {search_text}, context: {context}"
+        )
+
         search_text_string = ""
-        context_string = ""
         if search_text:
             if isinstance(search_text, dict):
-                search_params = " ".join(["{}:{}".format(key, value) for key, value in search_text.items()])
+                search_params = " ".join(
+                    [f"{key}:{value}" for key, value in search_text.items()]
+                )
+
             else:
                 search_params = search_text
-            search_text_string = "search_text={}".format(search_params)
-        if context:
-            context_string = "context={}".format(context)
+            search_text_string = f"search_text={search_params}"
+        context_string = f"context={context}" if context else ""
         if count is not None and start is not None:
-            paging_args = "&start={}&count={}".format(start, count)
+            paging_args = f"&start={start}&count={count}"
         else:
             paging_args = ""
-        url = "/securetrack/api/rule_search/{}?{}{}{}".format(device_id, search_text_string, context_string,
-                                                              paging_args)
+        url = f"/securetrack/api/rule_search/{device_id}?{search_text_string}{context_string}{paging_args}"
+
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except RequestException:
-            message = "Failed to get the list of rules" \
-                      " for device ID {} with search text:" \
-                      " {}, context: {}.".format(device_id, search_text, context)
+            message = f"Failed to get the list of rules for device ID {device_id} with search text: {search_text}, context: {context}."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Bad_Request_Error:
-            message = "Device with ID {} does not have a ready revision.".format(device_id)
+            message = f"Device with ID {device_id} does not have a ready revision."
             logger.critical(message)
             raise ValueError(message)
         return Rules_List.from_xml_string(response_string)
@@ -615,18 +664,21 @@ class Secure_Track_Helper(Secure_API_Helper):
             logger.info("Getting rules with rule documentation.")
 
         if custom_params:
-            params = '&'.join('{}={}'.format(k, v) for k, v in custom_params.items())
+            params = '&'.join(f'{k}={v}' for k, v in custom_params.items())
             uri_suffix += lead_param + params
 
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}/rules{}".format(device_id, uri_suffix),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}/rules{uri_suffix}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of rules for device ID {}.".format(device_id)
+            message = f"Failed to get the list of rules for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Rules_List.from_xml_string(response_string)
@@ -651,14 +703,16 @@ class Secure_Track_Helper(Secure_API_Helper):
             logger.info("Getting rules with rule documentation.")
         try:
             response_string = self.get_uri(
-                "/securetrack/api/revisions/{}/rules{}".format(revision_id, rule_documentation_uri_suffix),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/revisions/{revision_id}/rules{rule_documentation_uri_suffix}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of rules for revision ID {}.".format(revision_id)
+            message = f"Failed to get the list of rules for revision ID {revision_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Revision with ID {} does not exist.".format(revision_id)
+            message = f"Revision with ID {revision_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Rules_List.from_xml_string(response_string)
@@ -676,14 +730,17 @@ class Secure_Track_Helper(Secure_API_Helper):
 
         logger.info("Getting policies for device with ID '%s'.", revision_id)
         try:
-            response_string = self.get_uri("/securetrack/api/revisions/{}/policies".format(revision_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/revisions/{revision_id}/policies",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of policies for revision ID {}.".format(revision_id)
+            message = f"Failed to get the list of policies for revision ID {revision_id}."
             logger.critical(message)
             raise IOError(message)
         except (REST_Not_Found_Error, REST_Internal_Server_Error):
-            message = "Revision with ID {} does not exist.".format(revision_id)
+            message = f"Revision with ID {revision_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Policy_List.from_xml_string(response_string)
@@ -704,14 +761,17 @@ class Secure_Track_Helper(Secure_API_Helper):
         if device.model == "module":
             return Policy_List([])
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}/policies".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}/policies",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of policies for device ID {}.".format(device_id)
+            message = f"Failed to get the list of policies for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Policy_List.from_xml_string(response_string)
@@ -728,14 +788,17 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Getting bindings for device with ID '%s'.", device_id)
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}/bindings".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}/bindings",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of bindings for device ID {}.".format(device_id)
+            message = f"Failed to get the list of bindings for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Bindings_List.from_xml_string(response_string)
@@ -752,14 +815,17 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Getting interfaces for device with ID '%s'.", device_id)
         try:
-            response_string = self.get_uri("/securetrack/api/devices/{}/interfaces".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/{device_id}/interfaces",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of bindings for device ID {}.".format(device_id)
+            message = f"Failed to get the list of bindings for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Interfaces_List.from_xml_string(response_string)
@@ -771,11 +837,18 @@ class Secure_Track_Helper(Secure_API_Helper):
         :param interface_id: SecureTrack interface object id
         :return: Interface object
         """
-        logger.info("Getting interfaces id '{}' for device id '{}'.".format(interface_id, device_id))
-        for interface in self.get_interfaces_for_device(device_id):
-            if interface.id == interface_id:
-                return interface
-        return None
+        logger.info(
+            f"Getting interfaces id '{interface_id}' for device id '{device_id}'."
+        )
+
+        return next(
+            (
+                interface
+                for interface in self.get_interfaces_for_device(device_id)
+                if interface.id == interface_id
+            ),
+            None,
+        )
 
     def get_topology_interfaces(self, device_id):
         """Get the topology interfaces for a device
@@ -787,16 +860,20 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If a device with the specified ID dies not exist
         :raise IOError: If there was a communication problem trying to get the interfaces
         """
-        logger.info("Getting topology interfaces for device with ID {}".format(device_id))
+        logger.info(f"Getting topology interfaces for device with ID {device_id}")
         try:
-            response_string = self.get_uri("/securetrack/api/devices/topology_interfaces?mgmtId={}".format(device_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/devices/topology_interfaces?mgmtId={device_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of the topology interfaces for device with ID {}.".format(device_id)
+            message = f"Failed to get the list of the topology interfaces for device with ID {device_id}."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exists.".format(device_id)
+            message = f"Device with ID {device_id} does not exists."
             logger.critical(message)
             raise ValueError(message)
         return Topology_Interfaces_List.from_xml_string(response_string)
@@ -811,17 +888,18 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If a device with the specified ID dies not exist
         :raise IOError: If there was a communication problem trying to get the interfaces
         """
-        logger.info("Getting topology interfaces for device with ID {}".format(device_id))
+        logger.info(f"Getting topology interfaces for device with ID {device_id}")
         try:
-            request_uri = "/securetrack/api/devices/topology_interfaces" \
-                          "?genericDeviceId={}&mgmtId={}&is_generic=true".format(device_id, device_id)
+            request_uri = f"/securetrack/api/devices/topology_interfaces?genericDeviceId={device_id}&mgmtId={device_id}&is_generic=true"
+
             response_string = self.get_uri(request_uri, expected_status_codes=200).response.content
         except RequestException:
-            message = "Failed to get the list of the topology interfaces for device with ID {}.".format(device_id)
+            message = f"Failed to get the list of the topology interfaces for device with ID {device_id}."
+
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exists.".format(device_id)
+            message = f"Device with ID {device_id} does not exists."
             logger.critical(message)
             raise ValueError(message)
         return Topology_Interfaces_List.from_xml_string(response_string)
@@ -855,21 +933,13 @@ class Secure_Track_Helper(Secure_API_Helper):
             destinations = ",".join(destinations)
         if isinstance(services, list):
             services = ",".join(services)
-        if exclude:
-            exclude_string = "&exclude_any={}".format(exclude)
-        else:
-            exclude_string = ""
-        if action:
-            action_string = "&action={}".format(action)
-        else:
-            action_string = ""
+        exclude_string = f"&exclude_any={exclude}" if exclude else ""
+        action_string = f"&action={action}" if action else ""
         logger.info("Running policy analysis with the following parameters:"
                     "\nDevice IDs: %s\nSources: %s\nDestinations: %s\nServices: %s\nExclude: %s", device_ids, sources,
                     destinations, services, exclude)
-        request_uri = "/securetrack/api/policy_analysis/query/matching_rules" \
-                      "?device_ids={}&sources={}&destinations={}&services={}{}{}".format(device_ids, sources,
-                                                                                         destinations, services,
-                                                                                         exclude_string, action_string)
+        request_uri = f"/securetrack/api/policy_analysis/query/matching_rules?device_ids={device_ids}&sources={sources}&destinations={destinations}&services={services}{exclude_string}{action_string}"
+
         try:
             response_string = self.get_uri(request_uri, expected_status_codes=200).response.content
         except RequestException:
@@ -895,7 +965,7 @@ class Secure_Track_Helper(Secure_API_Helper):
         logger.info("Getting network objects for device with ID %s.", device_id)
         valid_types = ("basic", "host", "subnet", "range", "group", "domain", "any", "installon")
         if object_type and object_type in valid_types:
-            logger.info("Getting network object only for type '{}'".format(object_type))
+            logger.info(f"Getting network object only for type '{object_type}'")
             if not filter_params:
                 filter_params = {"type": object_type}
             else:
@@ -909,14 +979,16 @@ class Secure_Track_Helper(Secure_API_Helper):
 
         try:
             response_string = self.get_uri(
-                "/securetrack/api/devices/{}/network_objects/{}".format(device_id, url_params),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/devices/{device_id}/network_objects/{url_params}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of rules for device ID {}.".format(device_id)
+            message = f"Failed to get the list of rules for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Network_Objects_List.from_xml_string(response_string)
@@ -937,27 +1009,30 @@ class Secure_Track_Helper(Secure_API_Helper):
         logger.info("Getting services for device with ID '%s'.", device_id)
 
         if custom_params:
-            params = '&'.join('{}={}'.format(k, v) for k, v in custom_params.items())
-            params = '?' + params
+            params = '&'.join(f'{k}={v}' for k, v in custom_params.items())
+            params = f'?{params}'
         else:
             params = ''
-        url = "/securetrack/api/devices/{}/services{}".format(device_id, params)
+        url = f"/securetrack/api/devices/{device_id}/services{params}"
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except RequestException:
-            message = "Failed to get the list of services for device ID {}.".format(device_id)
+            message = f"Failed to get the list of services for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         all_services = Services_List.from_xml_string(response_string)
         services = []
         if custom_params is not None and 'name' in params:
-            for srv in all_services:
-                if srv.display_name == custom_params['name']:
-                    services.append(srv)
+            services.extend(
+                srv
+                for srv in all_services
+                if srv.display_name == custom_params['name']
+            )
+
         else:
             services = all_services
         return services
@@ -974,49 +1049,59 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If a device with the specified ID does not exist.
         :raise IOError: If there was a communication problem trying to get the services.
         """
-        logger.info("Getting services for device with ID {} and service name '{}'".format(device_id, service_name))
+        logger.info(
+            f"Getting services for device with ID {device_id} and service name '{service_name}'"
+        )
+
         try:
             response_string = self.get_uri(
-                "/securetrack/api/devices/{}/services?name={}".format(device_id, service_name),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/devices/{device_id}/services?name={service_name}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
-            message = "Failed to get the list of services for device ID {}.".format(device_id)
+            message = f"Failed to get the list of services for device ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist.".format(device_id)
+            message = f"Device with ID {device_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         try:
             service = Services_List.from_xml_string(response_string)[0]
         except IndexError:
-            msg = "No service with name {} on device with ID {} was found".format(service_name, device_id)
+            msg = f"No service with name {service_name} on device with ID {device_id} was found"
+
             logger.error(msg)
             raise ValueError(msg)
         return service
 
     def get_security_policy_exceptions(self, domain_id=DEFAULT_DOMAIN_ID):
-        logger.info("Getting security policy exceptions for domain id '{}'".format(domain_id))
-        url = "/securetrack/api/security_policies/exceptions?context={}".format(domain_id)
+        logger.info(f"Getting security policy exceptions for domain id '{domain_id}'")
+        url = f"/securetrack/api/security_policies/exceptions?context={domain_id}"
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except RequestException:
-            message = "Failed to get the list of exceptions for domain ID {}.".format(domain_id)
+            message = f"Failed to get the list of exceptions for domain ID {domain_id}."
             logger.critical(message)
             raise IOError(message)
         return SecurityPolicyExceptionList.from_xml_string(response_string)
 
     def get_security_policy_exception(self, exception_id, domain_id=DEFAULT_DOMAIN_ID):
-        logger.info("Getting security policy exception id '{}' for domain id '{}'".format(exception_id, domain_id))
-        url = "/securetrack/api/security_policies/exceptions/{}?context={}".format(exception_id, domain_id)
+        logger.info(
+            f"Getting security policy exception id '{exception_id}' for domain id '{domain_id}'"
+        )
+
+        url = f"/securetrack/api/security_policies/exceptions/{exception_id}?context={domain_id}"
+
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except RequestException:
-            message = "Failed to get the list of exceptions for domain ID {}.".format(domain_id)
+            message = f"Failed to get the list of exceptions for domain ID {domain_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Exception with ID {} does not exist.".format(exception_id)
+            message = f"Exception with ID {exception_id} does not exist."
             logger.critical(message)
             raise ValueError(message)
         return Security_Policy_Exception.from_xml_string(response_string)
@@ -1030,7 +1115,7 @@ class Secure_Track_Helper(Secure_API_Helper):
         :rtype: int
         """
         logger.info("Posting new security policy exception.")
-        uri = "/securetrack/api/security_policies/exceptions/?context={}".format(domain_id)
+        uri = f"/securetrack/api/security_policies/exceptions/?context={domain_id}"
         try:
             response = self.post_uri(uri, exception.to_xml_string(),
                                      expected_status_codes=201)
@@ -1042,7 +1127,8 @@ class Secure_Track_Helper(Secure_API_Helper):
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as client_error:
-            message = "Failed to create security policy exception, error was '{}'.".format(client_error.message)
+            message = f"Failed to create security policy exception, error was '{client_error.message}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1052,16 +1138,16 @@ class Secure_Track_Helper(Secure_API_Helper):
         :type exception_id: int
         :return:
         """
-        logger.info("Deleting security policy exception id '{}'".format(exception_id))
-        url = "/securetrack/api/security_policies/exceptions/{}".format(exception_id)
+        logger.info(f"Deleting security policy exception id '{exception_id}'")
+        url = f"/securetrack/api/security_policies/exceptions/{exception_id}"
         try:
             self.delete_uri(url, expected_status_codes=[200, 204])
         except RequestException:
-            message = "Failed to delete security policy exception with ID {}.".format(exception_id)
+            message = f"Failed to delete security policy exception with ID {exception_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Security Policy Exception with ID {} doesn't exist.".format(exception_id)
+            message = f"Security Policy Exception with ID {exception_id} doesn't exist."
             logger.critical(message)
             raise ValueError(message)
         return True
@@ -1077,8 +1163,11 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Getting security policies for domain ID %s.", domain_id)
         try:
-            response_string = self.get_uri("/securetrack/api/security_policies?context={}".format(domain_id),
-                                           expected_status_codes=200).response.content
+            response_string = self.get_uri(
+                f"/securetrack/api/security_policies?context={domain_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except RequestException:
             message = "Failed to get the list of security policies"
             logger.critical(message)
@@ -1097,14 +1186,14 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If no policy with given name (and optionally context) is found
         :raise IOError: If there was communication error
         """
-        logger.info("Searching for the security policy with ID {}".format(security_policy_id))
+        logger.info(f"Searching for the security policy with ID {security_policy_id}")
         security_policies = self.get_security_policies(context)
         try:
             return \
-                [security_policy for security_policy in security_policies if security_policy.id == security_policy_id][
+                    [security_policy for security_policy in security_policies if security_policy.id == security_policy_id][
                     0]
         except IndexError:
-            raise ValueError("No Security Policy with ID {} found".format(security_policy_id))
+            raise ValueError(f"No Security Policy with ID {security_policy_id} found")
 
     def get_security_policy_by_name(self, security_policy_name, context=DEFAULT_DOMAIN_ID):
         """Get Security Policy by ID from SecureTrack
@@ -1118,13 +1207,13 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If no policy with given name (and optionally context) is found
         :raise IOError: If there was communication error
         """
-        logger.info("Searching for the security policy '{}'".format(security_policy_name))
+        logger.info(f"Searching for the security policy '{security_policy_name}'")
         security_policies = self.get_security_policies(context)
         try:
             return [security_policy for security_policy in security_policies if
                     security_policy.name.lower() == security_policy_name.lower()][0]
         except IndexError:
-            raise ValueError("No Security Policy '{}' found".format(security_policy_name))
+            raise ValueError(f"No Security Policy '{security_policy_name}' found")
 
     def get_security_policy_matrix_csv(self, security_policy_id):
         """Get CSV (file object) from SecureTrack for specified security policy
@@ -1133,16 +1222,23 @@ class Secure_Track_Helper(Secure_API_Helper):
         :type security_policy_id: int
         :return: File object containing CSV config of the matrix policy
         """
-        logger.info("Getting CSV configuration of the Secure Policy with ID {}".format(security_policy_id))
+        logger.info(
+            f"Getting CSV configuration of the Secure Policy with ID {security_policy_id}"
+        )
+
         try:
-            request = self.get_uri("/securetrack/api/security_policies/{}/export".format(security_policy_id),
-                                   expected_status_codes=200)
+            request = self.get_uri(
+                f"/securetrack/api/security_policies/{security_policy_id}/export",
+                expected_status_codes=200,
+            )
+
         except RequestException:
             message = "Failed to get config of security policy."
             logger.critical(message)
             raise IOError(message)
         except REST_Client_Error as client_error:
-            message = "Failed to get config of security policy, error was '{}'.".format(client_error.message)
+            message = f"Failed to get config of security policy, error was '{client_error.message}'."
+
             logger.critical(message)
             raise ValueError(message)
         else:
@@ -1218,14 +1314,17 @@ class Secure_Track_Helper(Secure_API_Helper):
         """
         logger.info("Deleting security policy rule matrix.")
         try:
-            self.delete_uri("/securetrack/api/security_policies/{}".format(security_policy_id),
-                            expected_status_codes=[200, 204])
+            self.delete_uri(
+                f"/securetrack/api/security_policies/{security_policy_id}",
+                expected_status_codes=[200, 204],
+            )
+
         except RequestException:
-            message = "Failed to delete security policy with ID {}.".format(security_policy_id)
+            message = f"Failed to delete security policy with ID {security_policy_id}."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error:
-            message = "Security Policy Matrix with ID {} doesn't exist.".format(security_policy_id)
+            message = f"Security Policy Matrix with ID {security_policy_id} doesn't exist."
             logger.critical(message)
             raise ValueError(message)
         return True
@@ -1240,17 +1339,17 @@ class Secure_Track_Helper(Secure_API_Helper):
         :return:
         """
         if not force_delete and self.get_entries_for_zone_id(zone_id):
-            raise AttributeError('Zone with ID {} has entries, not deleting'.format(zone_id))
-        logger.info("Deleting Zone with ID {}.".format(zone_id))
-        url = "/securetrack/api/zones/{}".format(zone_id)
+            raise AttributeError(f'Zone with ID {zone_id} has entries, not deleting')
+        logger.info(f"Deleting Zone with ID {zone_id}.")
+        url = f"/securetrack/api/zones/{zone_id}"
         try:
             self.delete_uri(url, expected_status_codes=[200, 204])
         except REST_Not_Found_Error:
-            message = "Zone with ID {} doesn't exist.".format(zone_id)
+            message = f"Zone with ID {zone_id} doesn't exist."
             logger.critical(message)
             raise ValueError(message)
         except (RequestException, REST_HTTP_Exception):
-            message = "Failed to delete zone with ID {}.".format(zone_id)
+            message = f"Failed to delete zone with ID {zone_id}."
             logger.critical(message)
             raise IOError(message)
 
@@ -1267,26 +1366,31 @@ class Secure_Track_Helper(Secure_API_Helper):
             # FIX for different tag name on put of documentation
             rule.documentation._xml_tag = Elements.RULE_DOCUMENTATION
         except (TypeError, AttributeError) as e:
-            logger.error("Rule does not contain documentation. Error '{}'".format(e))
+            logger.error(f"Rule does not contain documentation. Error '{e}'")
             raise ValueError
         if remove_automatic_record_sets:
             rule.documentation.remove_automatic_record_sets()
         rule_documentation_xml = rule.documentation.to_xml_string().encode()
         try:
-            response = self.put_uri("/securetrack/api/devices/{}/rules/{}/documentation".format(device_id, rule.id),
-                                    rule_documentation_xml, expected_status_codes=[201, 204])
-            documentation_id = response.get_created_item_id()
-            return documentation_id
+            response = self.put_uri(
+                f"/securetrack/api/devices/{device_id}/rules/{rule.id}/documentation",
+                rule_documentation_xml,
+                expected_status_codes=[201, 204],
+            )
+
+            return response.get_created_item_id()
         except RequestException:
             message = "Failed to update rule documentation."
             logger.critical(message)
             raise IOError(message)
         except REST_Not_Found_Error as not_found_error:
-            message = "Failed to find device or rule, error was '{}'.".format(not_found_error.message)
+            message = f"Failed to find device or rule, error was '{not_found_error.message}'."
+
             logger.critical(message)
             raise ValueError(message)
         except REST_HTTP_Exception as client_error:
-            message = "Failed to update rule documentation, error was '{}'.".format(client_error.message)
+            message = f"Failed to update rule documentation, error was '{client_error.message}'."
+
             logger.critical(message)
             raise ValueError(message)
 
@@ -1302,17 +1406,23 @@ class Secure_Track_Helper(Secure_API_Helper):
         :raise ValueError: If a device or rule with the specified ID does not exist.
         :raise IOError: If there was a communication problem trying to get the rule.
         """
-        logger.info("Getting Rule Documentation for device ID {} for Rule ID {} .".format(device_id, rule_id))
+        logger.info(
+            f"Getting Rule Documentation for device ID {device_id} for Rule ID {rule_id} ."
+        )
+
         try:
             response_string = self.get_uri(
-                "/securetrack/api/devices/{}/rules/{}/documentation".format(device_id, rule_id),
-                expected_status_codes=200).response.content
+                f"/securetrack/api/devices/{device_id}/rules/{rule_id}/documentation",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Device with ID {} does not exist OR Rule ID {} does not exist.".format(device_id, rule_id)
+            message = f"Device with ID {device_id} does not exist OR Rule ID {rule_id} does not exist."
+
             logger.critical(message)
             raise ValueError(message)
         except RequestException:
-            message = "Failed to GET device with ID {}.".format(device_id)
+            message = f"Failed to GET device with ID {device_id}."
             logger.critical(message)
             raise IOError(message)
         return Rule_Documentation.from_xml_string(response_string)

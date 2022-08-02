@@ -28,7 +28,7 @@ class Domain(XML_Object_Base):
         return cls(domain_id, domain_name, description, address)
 
     def __str__(self):
-        return "Domain({},{})".format(self.id, self.name)
+        return f"Domain({self.id},{self.name})"
 
 
 class Domains(XML_List):
@@ -42,7 +42,9 @@ class Domains(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        domains = []
-        for domain_node in xml_node.iter(tag=xml_tags.Elements.DOMAIN):
-            domains.append(Domain.from_xml_node(domain_node))
+        domains = [
+            Domain.from_xml_node(domain_node)
+            for domain_node in xml_node.iter(tag=xml_tags.Elements.DOMAIN)
+        ]
+
         return cls(domains)

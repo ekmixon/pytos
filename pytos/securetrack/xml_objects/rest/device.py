@@ -54,9 +54,11 @@ class Device(XML_Object_Base, Comparable):
 
     @classmethod
     def from_db_device(cls, db_device, domain_name):
-        is_virtual = False
-        if db_device.is_virtual_context or db_device.virtual_type == "virtual_context":
-            is_virtual = True
+        is_virtual = bool(
+            db_device.is_virtual_context
+            or db_device.virtual_type == "virtual_context"
+        )
+
         return cls(db_device.cp_type, db_device.management_type, db_device.customer_id, domain_name,
                    db_device.management_id, db_device.management_name, db_device.is_offline,
                    topology=db_device.has_topology, virtual_type=db_device.virtual_type,
@@ -76,12 +78,11 @@ class Device(XML_Object_Base, Comparable):
         return self._parent
 
     def get_parents_recursive(self):
-        if self._parent is not None:
-            parents = [self._parent]
-            parents.extend(self._parent.get_parents_recursive())
-            return parents
-        else:
+        if self._parent is None:
             return []
+        parents = [self._parent]
+        parents.extend(self._parent.get_parents_recursive())
+        return parents
 
     def has_children(self):
         return bool(self._children)
@@ -107,10 +108,7 @@ class Device(XML_Object_Base, Comparable):
         self._children.append(child)
 
     def __repr__(self):
-        return "Device('{}','{}','{}','{}','{}','{}','{}','{}','{}',{})".format(self.model, self.vendor, self.domain_id,
-                                                                                self.domain_name, self.id, self.name,
-                                                                                self.offline, self.topology, self.ip,
-                                                                                self._children)
+        return f"Device('{self.model}','{self.vendor}','{self.domain_id}','{self.domain_name}','{self.id}','{self.name}','{self.offline}','{self.topology}','{self.ip}',{self._children})"
 
 
 class Devices_List(XML_List):
@@ -130,9 +128,11 @@ class Devices_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        devices = []
-        for device_node in xml_node.iter(tag=xml_tags.Elements.DEVICE):
-            devices.append(Device.from_xml_node(device_node))
+        devices = [
+            Device.from_xml_node(device_node)
+            for device_node in xml_node.iter(tag=xml_tags.Elements.DEVICE)
+        ]
+
         total = get_xml_int_value(xml_node, xml_tags.Elements.TOTAL)
         return cls(devices, total)
 
@@ -163,9 +163,11 @@ class GenericDevicesList(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        generic_devices = []
-        for generic_device_node in xml_node.iter(tag=xml_tags.Elements.DEVICE):
-            generic_devices.append(GenericDevice.from_xml_node(generic_device_node))
+        generic_devices = [
+            GenericDevice.from_xml_node(generic_device_node)
+            for generic_device_node in xml_node.iter(tag=xml_tags.Elements.DEVICE)
+        ]
+
         return cls(generic_devices)
 
 
@@ -185,9 +187,11 @@ class Device_Revisions_List(XML_List):
         :param xml_node: The XML node from which all necessary parameters will be parsed.
         :type xml_node: xml.etree.Element
         """
-        revisions = []
-        for revision_node in xml_node.iter(tag=xml_tags.Elements.REVISION):
-            revisions.append(Device_Revision.from_xml_node(revision_node))
+        revisions = [
+            Device_Revision.from_xml_node(revision_node)
+            for revision_node in xml_node.iter(tag=xml_tags.Elements.REVISION)
+        ]
+
         return cls(revisions)
 
     def sort(self):
@@ -239,10 +243,7 @@ class Device_Revision(XML_Object_Base):
         self.revisionId = revision_id
         self.time = revision_time
         self.ready = ready
-        if tickets:
-            self.tickets = tickets
-        else:
-            self.tickets = []
+        self.tickets = tickets or []
         super().__init__(xml_tags.Elements.REVISION)
 
     @classmethod
@@ -259,11 +260,14 @@ class Device_Revision(XML_Object_Base):
         revision_date = get_xml_text_value(xml_node, xml_tags.Elements.DATE)
         gui_client = get_xml_text_value(xml_node, xml_tags.Elements.GUICLIENT)
         num_id = get_xml_int_value(xml_node, xml_tags.Elements.ID)
-        modules_and_policy_node = get_xml_node(xml_node, xml_tags.Elements.MODULES_AND_POLICY, optional=True)
-        if modules_and_policy_node:
-            modules_and_policy = []
-            for node in modules_and_policy_node.iterfind('module_and_policy'):
-                modules_and_policy.append(Module_And_Policy.from_xml_node(node))
+        if modules_and_policy_node := get_xml_node(
+            xml_node, xml_tags.Elements.MODULES_AND_POLICY, optional=True
+        ):
+            modules_and_policy = [
+                Module_And_Policy.from_xml_node(node)
+                for node in modules_and_policy_node.iterfind('module_and_policy')
+            ]
+
         else:
             modules_and_policy = None
         policy_package = get_xml_text_value(xml_node, xml_tags.Elements.POLICYPACKAGE)
@@ -286,21 +290,26 @@ class Device_Revision(XML_Object_Base):
 
     def get_revision_date(self):
         try:
-            revision_date = datetime.strptime(self.date, Device_Revision.REVISION_DATE_FORMAT_STRING)
-            return revision_date
+            return datetime.strptime(
+                self.date, Device_Revision.REVISION_DATE_FORMAT_STRING
+            )
+
         except ValueError as valueerror:
             logger.error("Could not parse date string '%s' using format string '%s'", self.date,
                          Device_Revision.REVISION_DATE_FORMAT_STRING)
             raise valueerror
 
     def get_revision_datetime(self):
-        datetime_str = "{} {}".format(self.date, self.time)
-        datetime_frmt = "{} {}".format(Device_Revision.REVISION_DATE_FORMAT_STRING,
-                                       Device_Revision.REVISION_TIME_FORMAT_STRING)
+        datetime_str = f"{self.date} {self.time}"
+        datetime_frmt = f"{Device_Revision.REVISION_DATE_FORMAT_STRING} {Device_Revision.REVISION_TIME_FORMAT_STRING}"
+
         try:
             return datetime.strptime(datetime_str, datetime_frmt)
         except ValueError as error:
-            logger.error("Could not parse date time '{}' using format string '{}'".format(datetime_str, datetime_frmt))
+            logger.error(
+                f"Could not parse date time '{datetime_str}' using format string '{datetime_frmt}'"
+            )
+
             raise error
 
 class Device_Revision_Ticket (XML_Object_Base):

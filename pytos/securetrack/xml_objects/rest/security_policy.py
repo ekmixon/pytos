@@ -53,9 +53,11 @@ class Security_Policies_List(XML_List):
         :param xml_node:  The XML node with the object
         :type xml_node: xml.etree.Element
         """
-        policies = []
-        for policy_node in xml_node.iter(tag=Elements.SECURITY_POLICY):
-            policies.append(Security_Policy.from_xml_node(policy_node))
+        policies = [
+            Security_Policy.from_xml_node(policy_node)
+            for policy_node in xml_node.iter(tag=Elements.SECURITY_POLICY)
+        ]
+
         return cls(policies)
 
 
@@ -66,9 +68,13 @@ class SecurityPolicyExceptionList(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        security_policy_exception_list = []
-        for security_policy_exception in xml_node.iter(xml_tags.Elements.SECURITY_POLICY_EXCEPTION):
-            security_policy_exception_list.append(Security_Policy_Exception.from_xml_node(security_policy_exception))
+        security_policy_exception_list = [
+            Security_Policy_Exception.from_xml_node(security_policy_exception)
+            for security_policy_exception in xml_node.iter(
+                xml_tags.Elements.SECURITY_POLICY_EXCEPTION
+            )
+        ]
+
         return cls(security_policy_exception_list)
 
 
@@ -210,8 +216,8 @@ class Exception_Subnet_Network_Item(Exception_Network_Item):
             del self.prefix
 
     def __str__(self):
-        netmask = self.netmask if self.netmask else self.prefix
-        return "{}/{}".format(self.ip, netmask)
+        netmask = self.netmask or self.prefix
+        return f"{self.ip}/{netmask}"
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -241,7 +247,7 @@ class Exception_Range_Network_Item(Exception_Network_Item):
         self.set_attrib(xml_tags.Attributes.XSI_TYPE, xml_tags.Attributes.RANGE_NETWORK)
 
     def __str__(self):
-        return "{}/{}".format(self.minIp, self.maxIp)
+        return f"{self.minIp}/{self.maxIp}"
 
     @classmethod
     def from_xml_node(cls, xml_node):
@@ -359,7 +365,7 @@ class Exception_Custom_Service_Item(Exception_Service_Item):
         self.set_attrib(xml_tags.Attributes.XSI_TYPE, xml_tags.Attributes.CUSTOM)
 
     def __str__(self):
-        return "{}/{}".format(self.protocol, self.port)
+        return f"{self.protocol}/{self.port}"
 
     @classmethod
     def from_xml_node(cls, xml_node):

@@ -100,9 +100,10 @@ class NextDevice(XML_Object_Base):
     @classmethod
     def from_xml_node(cls, xml_node):
         name = get_xml_text_value(xml_node, Elements.NAME)
-        routes = []
-        for node in xml_node.iter(tag=Elements.ROUTES):
-            routes.append(Route.from_xml_node(node))
+        routes = [
+            Route.from_xml_node(node)
+            for node in xml_node.iter(tag=Elements.ROUTES)
+        ]
 
         return cls(name, routes)
 
@@ -172,9 +173,9 @@ class Binding(XML_Object_Base):
     def from_xml_node(cls, xml_node):
         name = get_xml_text_value(xml_node, Elements.NAME)
         enforced = get_xml_text_value(xml_node, Elements.ENFORCEDON)
-        rules = []
-        for node in xml_node.iter(tag=Elements.RULES):
-            rules.append(Rule.from_xml_node(node))
+        rules = [
+            Rule.from_xml_node(node) for node in xml_node.iter(tag=Elements.RULES)
+        ]
 
         return cls(name, rules, enforced)
 
@@ -196,25 +197,29 @@ class DeviceInfo(XML_Object_Base):
         name = get_xml_text_value(xml_node, Elements.NAME)
         vendor = get_xml_text_value(xml_node, Elements.VENDOR)
 
-        incoming_interfaces = []
-        for node in xml_node.iter(tag=Elements.INCOMINGINTERFACES):
-            incoming_interfaces.append(Interface.from_xml_node(node))
+        incoming_interfaces = [
+            Interface.from_xml_node(node)
+            for node in xml_node.iter(tag=Elements.INCOMINGINTERFACES)
+        ]
 
-        next_devices = []
-        for node in xml_node.iter(tag=Elements.NEXTDEVICES):
-            next_devices.append(NextDevice.from_xml_node(node))
+        next_devices = [
+            NextDevice.from_xml_node(node)
+            for node in xml_node.iter(tag=Elements.NEXTDEVICES)
+        ]
 
-        bindings = []
-        for node in xml_node.iter(tag=Elements.BINDINGS):
-            bindings.append(Binding.from_xml_node(node))
+        bindings = [
+            Binding.from_xml_node(node)
+            for node in xml_node.iter(tag=Elements.BINDINGS)
+        ]
 
-        nat_list = []
-        for node in xml_node.iter(tag=Elements.NATLIST):
-            nat_list.append(Nat.from_xml_node(node))
+        nat_list = [
+            Nat.from_xml_node(node) for node in xml_node.iter(tag=Elements.NATLIST)
+        ]
 
-        ipsec_list = []
-        for node in xml_node.iter(tag=Elements.IPSECLIST):
-            ipsec_list.append(IPSec.from_xml_node(node))
+        ipsec_list = [
+            IPSec.from_xml_node(node)
+            for node in xml_node.iter(tag=Elements.IPSECLIST)
+        ]
 
         return cls(name, vendor, incoming_interfaces, next_devices, bindings, nat_list, ipsec_list)
 
@@ -230,9 +235,10 @@ class PathCalculationResults(XML_Object_Base):
     @classmethod
     def from_xml_node(cls, xml_node):
         traffic_allowed = get_xml_text_value(xml_node, Elements.TRAFFIC_ALLOWED)
-        devices_info = []
-        for device_info_node in xml_node.iter(tag=Elements.DEVICE_INFO):
-            devices_info.append(DeviceInfo.from_xml_node(device_info_node))
+        devices_info = [
+            DeviceInfo.from_xml_node(device_info_node)
+            for device_info_node in xml_node.iter(tag=Elements.DEVICE_INFO)
+        ]
 
         return cls(traffic_allowed, devices_info)
 
@@ -253,9 +259,11 @@ class TopologyCloud(XML_Object_Base):
         domain = get_xml_text_value(xml_node, Elements.DOMAIN)
         cloud_type = get_xml_text_value(xml_node, Elements.TYPE)
         ip = get_xml_text_value(xml_node, Elements.IP)
-        members = []
-        for topology_cloud_members_node in xml_node.iter(tag=Elements.MEMBERS):
-            members.append(TopologyCloudMember.from_xml_node(topology_cloud_members_node))
+        members = [
+            TopologyCloudMember.from_xml_node(topology_cloud_members_node)
+            for topology_cloud_members_node in xml_node.iter(tag=Elements.MEMBERS)
+        ]
+
         return cls(cloud_id, name, domain, cloud_type, ip, members)
 
 class TopologyCloudMember(XML_Object_Base):
@@ -283,7 +291,9 @@ class TopologyCloudList(XML_Object_Base):
     def from_xml_node(cls, xml_node):
         count = get_xml_text_value(xml_node, Elements.COUNT)
         total = get_xml_text_value(xml_node, Elements.TOTAL)
-        topology_clouds = []
-        for topology_cloud_node in xml_node.iter(tag=Elements.TOPOLOGY_CLOUD):
-            topology_clouds.append(TopologyCloud.from_xml_node(topology_cloud_node))
+        topology_clouds = [
+            TopologyCloud.from_xml_node(topology_cloud_node)
+            for topology_cloud_node in xml_node.iter(tag=Elements.TOPOLOGY_CLOUD)
+        ]
+
         return cls(count, total, topology_clouds)

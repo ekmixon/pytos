@@ -89,8 +89,7 @@ class Ticket_Activity(enum.Enum):
     @staticmethod
     def find_matching_state(input_string):
         for item in list(Ticket_Activity):
-            match = re.match(item.value, input_string)
-            if match:
+            if match := re.match(item.value, input_string):
                 return item.name, item.value, match.groups()
         raise ValueError("No matching state found for string '%s'.", input_string)
 
@@ -99,10 +98,7 @@ class Ticket_Activity(enum.Enum):
         state_names = [state.name for state in states]
         try:
             state_match = Ticket_Activity.find_matching_state(input_string)
-            if state_match[0] in state_names:
-                return True
-            else:
-                return False
+            return state_match[0] in state_names
         except ValueError:
             return False
 

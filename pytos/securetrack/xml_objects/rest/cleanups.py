@@ -27,9 +27,11 @@ class Generic_Cleanup_List(XML_List):
         count = get_xml_int_value(xml_node, xml_tags.Elements.COUNT)
         total = get_xml_int_value(xml_node, xml_tags.Elements.TOTAL)
         score = get_xml_int_value(xml_node, xml_tags.Elements.SCORE)
-        cleanups = []
-        for user_node in xml_node.iter(tag=xml_tags.Elements.CLEANUP):
-            cleanups.append(Generic_Cleanup.from_xml_node(user_node))
+        cleanups = [
+            Generic_Cleanup.from_xml_node(user_node)
+            for user_node in xml_node.iter(tag=xml_tags.Elements.CLEANUP)
+        ]
+
         return cls(count, total, score, cleanups)
 
 

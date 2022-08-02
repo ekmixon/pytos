@@ -101,11 +101,7 @@ class REST_Request(object):
             self.verify_ssl = True
 
         session = kwargs.get("session")
-        if session is None:
-            self.session = requests.Session()
-        else:
-            self.session = session
-
+        self.session = requests.Session() if session is None else session
         proxies = kwargs.get("proxies")
         if proxies is not None:
             self.session.proxies = proxies
@@ -116,26 +112,27 @@ class REST_Request(object):
         if uri_length <= REST_Request.MAX_URI_LENGTH:
             self.uri = uri
         else:
-            raise ValueError("Maximum URI length ({}) exceeded , current URI length is {}, URI is '{}'".format(
-                REST_Request.MAX_URI_LENGTH, uri_length, uri))
+            raise ValueError(
+                f"Maximum URI length ({REST_Request.MAX_URI_LENGTH}) exceeded , current URI length is {uri_length}, URI is '{uri}'"
+            )
+
 
         login_data = kwargs.get("login_data")
-        if login_data is not None:
-            if all(login_data.values()):
-                if self.auth_method == RESTAuthMethods.Digest:
-                    self.auth_tuple = HTTPDigestAuth(login_data["username"], login_data["password"])
-                else:
-                    password_hash = hashlib.sha256()
-                    password_hash.update(login_data["password"].encode("ascii"))
-                    password_hash = password_hash.hexdigest()
-                    logger.debug("Setting login_data to username '%s', SHA256 hashed password '%s'.",
-                                 login_data["username"], password_hash)
-                    self.auth_tuple = (login_data["username"], login_data["password"])
-            else:
-                raise ValueError("Both username and password must be set.")
-        else:
+        if login_data is None:
             self.auth_tuple = None
 
+        elif all(login_data.values()):
+            if self.auth_method == RESTAuthMethods.Digest:
+                self.auth_tuple = HTTPDigestAuth(login_data["username"], login_data["password"])
+            else:
+                password_hash = hashlib.sha256()
+                password_hash.update(login_data["password"].encode("ascii"))
+                password_hash = password_hash.hexdigest()
+                logger.debug("Setting login_data to username '%s', SHA256 hashed password '%s'.",
+                             login_data["username"], password_hash)
+                self.auth_tuple = (login_data["username"], login_data["password"])
+        else:
+            raise ValueError("Both username and password must be set.")
         timeout = kwargs.get("timeout")
         if timeout is not None:
             logger.debug("Setting request timout to '%s'", timeout)
@@ -183,7 +180,7 @@ class REST_Request(object):
         headers = kwargs.get("headers")
         self.headers = {}
         if headers is not None:
-            self.headers.update(headers)
+            self.headers |= headers
             logger.debug("Setting headers to '%s'", headers)
         self.url = "{protocol}://{hostname}{uri}".format(protocol=self.protocol, hostname=self.hostname, uri=self.uri)
 
@@ -221,15 +218,20 @@ class REST_Request(object):
             logger.error("Got the following error while performing request: '%s'.", request_exception)
             status_code_ok = False
 
-        if status_code_ok:
-            if isinstance(self.expected_status_codes, collections.Iterable):
-                if self.response.status_code not in self.expected_status_codes:
-                    status_code_ok = False
-            elif isinstance(self.expected_status_codes, int):
-                if self.expected_status_codes != self.response.status_code:
-                    status_code_ok = False
-            else:
-                raise ValueError("self.expected_status_codes must either be an int or list of ints.")
+        if isinstance(self.expected_status_codes, collections.Iterable):
+            if (
+                status_code_ok
+                and self.response.status_code not in self.expected_status_codes
+            ):
+                status_code_ok = False
+        elif isinstance(self.expected_status_codes, int):
+            if (
+                status_code_ok
+                and self.expected_status_codes != self.response.status_code
+            ):
+                status_code_ok = False
+        elif status_code_ok:
+            raise ValueError("self.expected_status_codes must either be an int or list of ints.")
 
         if not status_code_ok:
             error_message = ""
@@ -238,9 +240,9 @@ class REST_Request(object):
                 api_error_message = get_xml_text_value(error_response_xml, "message")
                 api_error_code = error_response_xml.find("code").text
                 if api_error_message is not None:
-                    error_message = "Message from API is '{}'.\n".format(api_error_message)
+                    error_message = f"Message from API is '{api_error_message}'.\n"
                     logger.error(error_message)
-                error_message += "Error from API is '{}'.".format(api_error_code)
+                error_message += f"Error from API is '{api_error_code}'."
                 logger.error(error_message)
             except (ParseError, AttributeError):
                 error_message = "Could not parse response from API."
@@ -261,8 +263,14 @@ class REST_Request(object):
                 self.response = self.session.send(self.request, verify=self.verify_ssl, timeout=self.timeout)
             except requests.exceptions.SSLError as request_exception:
                 exception_copy = request_exception
-                logger.error("Connection to '%s://%s%s' failed ('%s').", self.protocol, self.hostname, self.uri,
-                             request_exception.args[0])
+                logger.error(
+                    "Connection to '%s://%s%s' failed ('%s').",
+                    self.protocol,
+                    self.hostname,
+                    self.uri,
+                    exception_copy.args[0],
+                )
+
             except requests.exceptions.ConnectionError as request_exception:
                 exception_copy = request_exception
                 message = "Connection to {}://{}{} failed."
@@ -291,18 +299,18 @@ class REST_Request(object):
                     break
                 except (REST_Bad_Gateway, REST_Service_Unavailable_Error) as request_exception:
                     exception_copy = request_exception
-                    self.log_error_details(request_exception)
+                    self.log_error_details(exception_copy)
                 except REST_Unauthorized_Error as request_exception:
                     if unauthorized_error:
                         exception_copy = request_exception
-                        self.log_error_details(request_exception)
+                        self.log_error_details(exception_copy)
                         break
                     else:
                         unauthorized_error = True
                         REST_Request.cookies = None
                 except REST_HTTP_Exception as request_exception:
                     exception_copy = request_exception
-                    self.log_error_details(request_exception)
+                    self.log_error_details(exception_copy)
                     break
 
             logger.debug("Sleeping for '%s' seconds between retries.", self.retry_interval)
@@ -333,9 +341,9 @@ class REST_Request(object):
         logger.debug("Params: '%s'.", params)
         for index, key in enumerate(params.keys()):
             if index == 0:
-                self.body = "{}={}".format(key, urllib.parse.quote_plus(str(params[key])))
+                self.body = f"{key}={urllib.parse.quote_plus(str(params[key]))}"
             else:
-                self.body += "&{}={}".format(key, urllib.parse.quote_plus(str(params[key])))
+                self.body += f"&{key}={urllib.parse.quote_plus(str(params[key]))}"
 
 
 class GET_Request(REST_Request):
@@ -395,7 +403,7 @@ class POST_Request(REST_Request):
             logger.debug("Got the following multi-part form params '%s'", multi_part_form_params)
 
         data_types = (params, multi_part_form_params, body)
-        true_count = sum([1 for data_type in data_types if data_type])
+        true_count = sum(1 for data_type in data_types if data_type)
         if true_count > 1:
             raise ValueError("Only one data type to be sent can be used: body, params or multi_part_form_params.")
 
@@ -447,7 +455,7 @@ class PUT_Request(REST_Request):
         # Handle parameters in dict form
         params = kwargs.get("params")
         data_types = (params, body)
-        true_count = sum([1 for data_type in data_types if data_type])
+        true_count = sum(1 for data_type in data_types if data_type)
         if true_count > 1:
             raise ValueError("Only one data type to be POSTed can be used: body or params.")
         if params is not None:
@@ -455,12 +463,11 @@ class PUT_Request(REST_Request):
         else:
             self.body = body
 
-        if self.body is not None:
-            if "Content-Type" not in self.headers:
-                if cgi:
-                    self.headers["Content-Type"] = "application/x-www-form-urlencoded"
-                else:
-                    self.headers["Content-Type"] = "application/xml"
+        if self.body is not None and "Content-Type" not in self.headers:
+            if cgi:
+                self.headers["Content-Type"] = "application/x-www-form-urlencoded"
+            else:
+                self.headers["Content-Type"] = "application/xml"
         logger.info("Sending PUT request to '%s'", self.url)
         request_obj = requests.Request("PUT", self.url, data=self.body, auth=self.auth_tuple, headers=self.headers,
                                        cookies=kwargs.get('cookies'))

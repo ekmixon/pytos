@@ -58,10 +58,7 @@ class Secure_Config_Parser(configparser.ConfigParser, FileMonitor):
                 if default_value is None:
                     return None
                 else:
-                    if callable(default_value):
-                        return default_value()
-                    else:
-                        return default_value
+                    return default_value() if callable(default_value) else default_value
 
     def getint(self, section, option, mandatory=True, **kwargs):
         try:
@@ -105,7 +102,7 @@ class Secure_Config_Parser(configparser.ConfigParser, FileMonitor):
         """
         logger.info("Updating configuration file '%s' with configuration.", self.config_file_path)
         with open(self.config_file_path, "w") as config_file:
-            delimiter = " {} ".format(self._delimiters[0])
+            delimiter = f" {self._delimiters[0]} "
             if self._defaults:
                 self._write_section(config_file, self.default_section, self._defaults.items(), delimiter)
             for section in self._sections:

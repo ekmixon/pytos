@@ -33,10 +33,7 @@ def is_ipv4_string(ip):
     :param ip: The IP address to check.
     :rtype: bool
     """
-    if re.match(IPV4_ADDRESS_REGEX, ip):
-        return True
-    else:
-        return False
+    return bool(re.match(IPV4_ADDRESS_REGEX, ip))
 
 
 def is_ipv6_string(ip):
@@ -46,27 +43,22 @@ def is_ipv6_string(ip):
     :param ip: The IP address to check.
     :rtype: bool
     """
-    if re.match(IPV6_ADDRESS_REGEX, ip):
-        return True
-    else:
-        return False
+    return bool(re.match(IPV6_ADDRESS_REGEX, ip))
 
 
 def dns_lookup(target, query_type="A", rdclass=1, tcp=False):
     if is_ipv4_string(target) or is_ipv6_string(target):
-        if query_type == "PTR":
-            try:
-                target = dns.reversename.from_address(target)
-            except (dns.resolver.NXDOMAIN, dns.name.LabelTooLong, dns.exception.Timeout, dns.resolver.NoNameservers):
-                return []
-        else:
+        if query_type != "PTR":
             raise ValueError("Only PTR is supported for IP addresses.")
+        try:
+            target = dns.reversename.from_address(target)
+        except (dns.resolver.NXDOMAIN, dns.name.LabelTooLong, dns.exception.Timeout, dns.resolver.NoNameservers):
+            return []
     try:
         answers = dns.resolver.query(target, query_type, rdclass, tcp)
     except (dns.resolver.NXDOMAIN, dns.name.LabelTooLong, dns.exception.Timeout, dns.resolver.NoNameservers):
         return []
-    answers_list = [str(answer).rstrip(".") for answer in answers]
-    return answers_list
+    return [str(answer).rstrip(".") for answer in answers]
 
 
 @lru_cache()
@@ -81,10 +73,10 @@ def get_iana_services():
     elif os_dist == "Windows":
         services_file_path = "C:\\windows\\system32\\etc\\services"
     else:
-        raise TypeError("Unsupported OS '{}'".format(os_dist))
+        raise TypeError(f"Unsupported OS '{os_dist}'")
     services_dict = {}
     with open(services_file_path) as services_file:
-        for line in services_file.readlines():
+        for line in services_file:
             if not line.startswith("#") and not line.isspace():
                 split_line = line.split()
                 service_name = split_line[0]
@@ -116,10 +108,10 @@ def get_iana_protocols():
     elif os_dist == "Windows":
         protocols_file_path = "C:\\windows\\system32\\etc\\protocols"
     else:
-        raise TypeError("Unsupported OS '{}'".format(os_dist))
+        raise TypeError(f"Unsupported OS '{os_dist}'")
     protocols = {}
     with open(protocols_file_path) as services_file:
-        for line in services_file.readlines():
+        for line in services_file:
             if not line.startswith("#") and not line.isspace():
                 _, protocol_number, protocol_name, *_ = line.split()
                 protocols[int(protocol_number)] = protocol_name
@@ -134,17 +126,15 @@ def get_ip_subnets(ip):
     :list[netaddr.IPNetwork] 
     """
     ip = ip.strip().replace(" ", "")
-    if "/" in ip:
+    if "/" not in ip and "-" not in ip and is_ipv4_string(ip) or "/" in ip:
         return [netaddr.IPNetwork(ip)]
-    elif "-" in ip:
+    elif "/" not in ip and "-" not in ip and not is_ipv4_string(ip):
+        raise ValueError(f"Invalid IP string '{ip}'.")
+
+    else:
         start_ip, end_ip = ip.split("-")
         ip_set_object = netaddr.IPSet(netaddr.IPRange(start_ip, end_ip, flags=netaddr.ZEROFILL))
-        return [address for address in ip_set_object.iter_cidrs()]
-    else:
-        if is_ipv4_string(ip):
-            return [netaddr.IPNetwork(ip)]
-        else:
-            raise ValueError("Invalid IP string '{}'.".format(ip))
+        return list(ip_set_object.iter_cidrs())
 
 
 def calculate_quad_dotted_netmask(mask):
@@ -169,9 +159,12 @@ def get_local_ip_addresses():
     """
     addresses = []
     for interface in netifaces.interfaces():
-        for address in netifaces.ifaddresses(interface).get(2, []):
-            if address["addr"] != "127.0.0.1":
-                addresses.append(address["addr"])
+        addresses.extend(
+            address["addr"]
+            for address in netifaces.ifaddresses(interface).get(2, [])
+            if address["addr"] != "127.0.0.1"
+        )
+
     return addresses
 
 

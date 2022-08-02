@@ -16,9 +16,11 @@ class NatRules(XML_List):
 
     @classmethod
     def from_xml_node(cls, xml_node):
-        rules = []
-        for nat_rule in xml_node.iter(tag=Elements.NAT_RULE):
-            rules.append(NatRule.from_xml_node(nat_rule))
+        rules = [
+            NatRule.from_xml_node(nat_rule)
+            for nat_rule in xml_node.iter(tag=Elements.NAT_RULE)
+        ]
+
         return cls(rules)
 
 
@@ -58,14 +60,7 @@ class NatRule(XML_Object_Base, Comparable):
         return tuple(hash_keys)
 
     def __str__(self):
-        return "ORIGINAL: (src={} dst={} srv={}); TRANSLATED: (src={} dst={} srv={})".format(
-            self.orig_src_network,
-            self.orig_dst_network,
-            self.orig_service,
-            self.translated_src_network,
-            self.translated_dst_network,
-            self.translated_service
-        )
+        return f"ORIGINAL: (src={self.orig_src_network} dst={self.orig_dst_network} srv={self.orig_service}); TRANSLATED: (src={self.translated_src_network} dst={self.translated_dst_network} srv={self.translated_service})"
 
     def is_enabled(self):
         return str_to_bool(self.disabled)
@@ -227,8 +222,9 @@ class TranslatedDstNetwork(Base_Object):
         uid = get_xml_text_value(xml_node, Elements.UID)
         display_name = get_xml_text_value(xml_node, Elements.DISPLAY_NAME)
         name = get_xml_text_value(xml_node, Elements.NAME)
-        dm_inline_members_node = get_xml_node(xml_node, Elements.DM_INLINE_MEMBRES, True)
-        if dm_inline_members_node:
+        if dm_inline_members_node := get_xml_node(
+            xml_node, Elements.DM_INLINE_MEMBRES, True
+        ):
             dm_inline_members = XML_List.from_xml_node_by_tags(xml_node, Elements.DM_INLINE_MEMBRES, Elements.MEMBER,
                                                                DmInlineMember)
         else:
@@ -278,8 +274,9 @@ class EgressInterface(XML_Object_Base):
         device_id = get_xml_text_value(xml_node, Elements.DEVICE_ID)
         acl_name = get_xml_text_value(xml_node, Elements.ACL_NAME)
         is_global = get_xml_text_value(xml_node, Elements.GLOBAL)
-        interface_ips_node = get_xml_node(xml_node, Elements.INTERFACE_IPS, True)
-        if interface_ips_node:
+        if interface_ips_node := get_xml_node(
+            xml_node, Elements.INTERFACE_IPS, True
+        ):
             interface_ips = XML_List.from_xml_node_by_tags(xml_node, Elements.INTERFACE_IPS, Elements.INTERFACE_IP,
                                                            NatInterfaceIP)
         else:

@@ -62,7 +62,7 @@ class Test_Service_Types(unittest.TestCase):
         assert single_service_type1 in single_service_type2
         assert single_service_type1 != single_service_type3
         assert single_service_type3 not in single_service_type4
-        assert not single_service_type1 == 443
+        assert single_service_type1 != 443
 
         # Assertions for __hash__
         assert hash(single_service_type1) == hash(single_service_type2)

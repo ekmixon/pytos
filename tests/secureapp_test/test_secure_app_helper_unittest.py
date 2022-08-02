@@ -11,19 +11,30 @@ from pytos.secureapp.xml_objects.rest import Application_Owner, Application, Hos
     Network_Objects_List, Connection_List
 
 VALID_TEST_APP_NAME = "TEST_APP_123_321"
-VALID_TEST_APP_NAME_AFTER_UPDATE = VALID_TEST_APP_NAME + '_after_update'
+VALID_TEST_APP_NAME_AFTER_UPDATE = f'{VALID_TEST_APP_NAME}_after_update'
 VALID_TEST_NETWORK_OBJECT_NAME = "network_object1"
-VALID_TEST_NETWORK_OBJECT_NAME_AFTER_UPDATE = VALID_TEST_NETWORK_OBJECT_NAME + '_after_update'
+VALID_TEST_NETWORK_OBJECT_NAME_AFTER_UPDATE = (
+    f'{VALID_TEST_NETWORK_OBJECT_NAME}_after_update'
+)
+
 VALID_TEST_SERVICE_NAME = "service1"
-VALID_TEST_SERVICE_NAME_AFTER_UPDATE = VALID_TEST_SERVICE_NAME + '_after_update'
+VALID_TEST_SERVICE_NAME_AFTER_UPDATE = (
+    f'{VALID_TEST_SERVICE_NAME}_after_update'
+)
+
 VALID_TEST_CONNECTION_NAME = "Connection 1"
-VALID_TEST_CONNECTION_NAME_AFTER_UPDATE = VALID_TEST_CONNECTION_NAME + '_after_update'
+VALID_TEST_CONNECTION_NAME_AFTER_UPDATE = (
+    f'{VALID_TEST_CONNECTION_NAME}_after_update'
+)
 
 
 def fake_request_response(rest_file):
     full_path = os.path.dirname(os.path.abspath(__file__))
     sub_resources_dir = sys._getframe(1).f_locals['self'].__class__.__name__.lower()
-    resource_file = os.path.join(full_path, "resources", sub_resources_dir, "{}.xml".format(rest_file))
+    resource_file = os.path.join(
+        full_path, "resources", sub_resources_dir, f"{rest_file}.xml"
+    )
+
     with open(resource_file, mode='rb') as f:
         return f.read()
 
@@ -304,10 +315,10 @@ class Test_Secure_App_Helper(unittest.TestCase):
                 pass
             mock_delete_uri.assert_called_with(
                 'DELETE',
-                'https://localhost/securechangeworkflow/api/secureapp/repository/services?name={}'.format(VALID_TEST_SERVICE_NAME_AFTER_UPDATE),
+                f'https://localhost/securechangeworkflow/api/secureapp/repository/services?name={VALID_TEST_SERVICE_NAME_AFTER_UPDATE}',
                 auth=('username', 'password'),
                 headers={'Content-Type': 'application/xml'},
-                cookies=self.mock_uri.return_value.cookies
+                cookies=self.mock_uri.return_value.cookies,
             )
 
     def test_16_delete_app_by_id(self):
@@ -322,10 +333,10 @@ class Test_Secure_App_Helper(unittest.TestCase):
                 pass
             mock_delete_uri.assert_called_with(
                 'DELETE',
-                'https://localhost/securechangeworkflow/api/secureapp/repository/applications/{}'.format(app.id),
+                f'https://localhost/securechangeworkflow/api/secureapp/repository/applications/{app.id}',
                 auth=('username', 'password'),
                 headers={'Content-Type': 'application/xml'},
-                cookies=self.mock_uri.return_value.cookies
+                cookies=self.mock_uri.return_value.cookies,
             )
 
     def test_17_create_user(self):

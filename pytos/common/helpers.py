@@ -59,10 +59,10 @@ class Secure_API_Helper:
         self.timeout = timeout
 
     def _is_running_on_localhost(self):
-        if self.hostname.startswith("127.0.0.1") or self.hostname.startswith("localhost"):
-            return True
-        else:
-            return False
+        return bool(
+            self.hostname.startswith("127.0.0.1")
+            or self.hostname.startswith("localhost")
+        )
 
     @staticmethod
     def _get_application():
@@ -116,9 +116,7 @@ class Secure_API_Helper:
                                                 timeout=timeout, cookies=cookies,
                                                 session=session, max_retries=max_retries)
 
-        response_cookies = get_request.response.cookies
-
-        if response_cookies:
+        if response_cookies := get_request.response.cookies:
             self.cookies_dict[application] = response_cookies
 
         return get_request
@@ -164,27 +162,27 @@ class Secure_API_Helper:
                                                       expected_status_codes=expected_status_codes,
                                                       timeout=timeout, cookies=cookies,
                                                       session=session)
+        elif multi_part_form_params is None:
+            logger.debug("Sending regular POST.")
+            post_request = rest_requests.POST_Request(self._real_hostname, uri, body, headers=headers,
+                                                      login_data=self.login_data, verify_ssl=False,
+                                                      expected_status_codes=expected_status_codes,
+                                                      timeout=timeout, cookies=cookies,
+                                                      session=session, cgi=cgi)
+
         else:
-            if multi_part_form_params is not None:
-                logger.debug("Sending multi part request, data is " + str(multi_part_form_params))
-                post_request = rest_requests.POST_Request(self._real_hostname, uri, body, headers=headers,
-                                                          multi_part_form_params=multi_part_form_params,
-                                                          cgi=cgi, login_data=self.login_data,
-                                                          verify_ssl=False,
-                                                          expected_status_codes=expected_status_codes,
-                                                          timeout=timeout, cookies=cookies,
-                                                          session=session)
-            else:
-                logger.debug("Sending regular POST.")
-                post_request = rest_requests.POST_Request(self._real_hostname, uri, body, headers=headers,
-                                                          login_data=self.login_data, verify_ssl=False,
-                                                          expected_status_codes=expected_status_codes,
-                                                          timeout=timeout, cookies=cookies,
-                                                          session=session, cgi=cgi)
+            logger.debug(
+                f"Sending multi part request, data is {str(multi_part_form_params)}"
+            )
 
-        response_cookies = post_request.response.cookies
-
-        if response_cookies:
+            post_request = rest_requests.POST_Request(self._real_hostname, uri, body, headers=headers,
+                                                      multi_part_form_params=multi_part_form_params,
+                                                      cgi=cgi, login_data=self.login_data,
+                                                      verify_ssl=False,
+                                                      expected_status_codes=expected_status_codes,
+                                                      timeout=timeout, cookies=cookies,
+                                                      session=session)
+        if response_cookies := post_request.response.cookies:
             self.cookies_dict[application] = response_cookies
 
         return post_request
@@ -220,9 +218,7 @@ class Secure_API_Helper:
                                                 timeout=timeout, cookies=cookies,
                                                 session=session)
 
-        response_cookies = put_request.response.cookies
-
-        if response_cookies:
+        if response_cookies := put_request.response.cookies:
             self.cookies_dict[application] = response_cookies
 
         return put_request
@@ -254,9 +250,7 @@ class Secure_API_Helper:
                                                       timeout=timeout, cookies=cookies,
                                                       session=session)
 
-        response_cookies = delete_request.response.cookies
-
-        if response_cookies:
+        if response_cookies := delete_request.response.cookies:
             self.cookies_dict[application] = response_cookies
 
         return delete_request

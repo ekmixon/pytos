@@ -13,7 +13,10 @@ from pytos.securechange.xml_objects.rest import Ticket, Ticket_History_Activitie
 def fake_request_response(rest_file):
     full_path = os.path.dirname(os.path.abspath(__file__))
     sub_resources_dir = sys._getframe(1).f_locals['self'].__class__.__name__.lower()
-    resource_file = os.path.join(full_path, "resources", sub_resources_dir, "{}.xml".format(rest_file))
+    resource_file = os.path.join(
+        full_path, "resources", sub_resources_dir, f"{rest_file}.xml"
+    )
+
     with open(resource_file, mode='rb') as f:
         return f.read()
 
@@ -47,7 +50,10 @@ class TestSecureChangeHelper(unittest.TestCase):
         self.mock_get_uri.return_value.status_code = 201
         full_path = os.path.dirname(os.path.abspath(__file__))
         sub_resources_dir = sys._getframe(1).f_locals['self'].__class__.__name__.lower()
-        resource_file = os.path.join(full_path, "resources", sub_resources_dir, "{}.xml".format('new_ticket'))
+        resource_file = os.path.join(
+            full_path, "resources", sub_resources_dir, 'new_ticket.xml'
+        )
+
         ticket_obj = self.helper.read_ticket_template(resource_file)
         ticket_id = self.helper.post_ticket(ticket_obj)
         self.assertEqual(ticket_id, 1)

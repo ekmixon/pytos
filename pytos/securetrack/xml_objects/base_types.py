@@ -18,10 +18,7 @@ class Base_Object(XML_Object_Base):
         super().__init__(xml_tag)
 
     def __str__(self):
-        if self.display_name:
-            return str(self.display_name)
-        else:
-            return str(self.name)
+        return str(self.display_name) if self.display_name else str(self.name)
 
 
 class Service(Base_Object):

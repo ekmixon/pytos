@@ -41,17 +41,21 @@ class Rule_decommission_Generator:
         """
         device_bindings = []
         for bind_uid, rules in self.bindings.items():
-            bind_rules = []
-            for rule_uid in rules:
-                bind_rules.append(SlimRule(uid=rule_uid))
+            bind_rules = [SlimRule(uid=rule_uid) for rule_uid in rules]
             bind_rules = XML_List(Elements.RULES, bind_rules)
             device_bindings.append(RuleDecommissionBinding(binding_uid=bind_uid, rules=bind_rules))
 
         device_bindings = XML_List(Elements.BINDINGS, device_bindings)
-        devices = XML_List(Elements.DEVICES, [RuleDecommissionDevice(revision_id=self.revision_id,
-                                                                     management_id=self.device_id,
-                                                                     bindings=device_bindings)])
-        return devices
+        return XML_List(
+            Elements.DEVICES,
+            [
+                RuleDecommissionDevice(
+                    revision_id=self.revision_id,
+                    management_id=self.device_id,
+                    bindings=device_bindings,
+                )
+            ],
+        )
 
 
 class Step_Field_Rule_Decommission(Step_Field_Base):
@@ -113,7 +117,7 @@ class Step_Field_Rule_Decommission(Step_Field_Base):
         self.remove_verifier_result()
 
     def to_pretty_str(self):
-        action_str = "Action: {}".format(self.action)
+        action_str = f"Action: {self.action}"
         devices_str = '\n'.join(device.to_pretty_str() for device in self.devices)
         return '\n\n'.join((action_str, devices_str))
 
@@ -154,7 +158,7 @@ class RuleDecommissionDevice(XML_Object_Base):
 
     def to_pretty_str(self):
         bindings_info = "\n".join(binding.to_pretty_str() for binding in self.bindings)
-        return "Device name: {}\n{}".format(self.management_name, bindings_info)
+        return f"Device name: {self.management_name}\n{bindings_info}"
 
 
 class RDVerifier(XML_Object_Base):
@@ -204,10 +208,7 @@ class RuleDecommissionBinding(XML_Object_Base):
         binding_uid = get_xml_text_value(xml_node, Elements.BINDING_UID)
         rules = XML_List.from_xml_node_by_tags(xml_node, Elements.RULES, Elements.RULE, SlimRuleWithMetadata)
         binding_node = get_xml_node(xml_node, Elements.BINDING, True)
-        if binding_node is not None:
-            binding = Binding.from_xml_node(binding_node)
-        else:
-            binding = None
+        binding = None if binding_node is None else Binding.from_xml_node(binding_node)
         return cls(binding_uid, rules, binding)
 
     def to_pretty_str(self):

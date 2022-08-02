@@ -98,7 +98,7 @@ class Secure_Change_Helper(Secure_API_Helper):
                 ticket_xml_string = ticket_template_file.read()
                 ticket_xml_node = ET.fromstring(ticket_xml_string)
         except FileNotFoundError:
-            message = "The file {} does not exist.".format(ticket_template_path)
+            message = f"The file {ticket_template_path} does not exist."
             logger.error(message)
             raise FileNotFoundError(message)
         else:
@@ -206,14 +206,16 @@ class Secure_Change_Helper(Secure_API_Helper):
         """
         try:
             response_string = self.get_uri(
-                    "/securechangeworkflow/api/securechange/tickets/{}/history".format(ticket_id),
-                    expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/history",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Not_Found_Error:
-            message = "Ticket with ID {} does not exist.".format(ticket_id)
+            message = f"Ticket with ID {ticket_id} does not exist."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException:
-            message = "Failed to GET history for ticket ID {}.".format(ticket_id)
+            message = f"Failed to GET history for ticket ID {ticket_id}."
             logger.error(message)
             raise IOError(message)
         xml_node = ET.fromstring(response_string)
@@ -235,14 +237,13 @@ class Secure_Change_Helper(Secure_API_Helper):
         try:
             response = self.post_uri("/securechangeworkflow/api/securechange/tickets/", ticket_xml,
                                      expected_status_codes=201)
-            ticket_id = response.get_created_item_id()
-            return ticket_id
+            return response.get_created_item_id()
         except REST_Bad_Request_Error as create_error:
-            message = "Could not create ticket, error was '{}'.".format(create_error)
+            message = f"Could not create ticket, error was '{create_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as create_error:
-            message = "Could not create ticket, error was '{}'.".format(create_error)
+            message = f"Could not create ticket, error was '{create_error}'."
             logger.error(message)
             raise IOError(message)
 
@@ -259,19 +260,24 @@ class Secure_Change_Helper(Secure_API_Helper):
         :raise IOError: If there was a communication error.
         """
 
-        logger.info("Setting new requester with ID {} for"
-                    " ticket with ID {}. Comment: '{}'".format(requester_id, ticket_id, comment))
+        logger.info(
+            f"Setting new requester with ID {requester_id} for ticket with ID {ticket_id}. Comment: '{comment}'"
+        )
+
         change_requester_comment = Comment(comment)
         try:
-            self.put_uri("/securechangeworkflow/api/securechange/tickets/{}/change_requester/{}".format(ticket_id,
-                                                                                                        requester_id),
-                    change_requester_comment.to_xml_string(), expected_status_codes=[200, 201])
+            self.put_uri(
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/change_requester/{requester_id}",
+                change_requester_comment.to_xml_string(),
+                expected_status_codes=[200, 201],
+            )
+
         except (REST_Not_Found_Error, REST_Bad_Request_Error) as error:
-            msg = "Could not set new requester for the ticket. Error: {}".format(error)
+            msg = f"Could not set new requester for the ticket. Error: {error}"
             logger.error(msg)
             raise ValueError(msg)
         except requests.RequestException as error:
-            msg = "Could not set new requester for the ticket. Error: {}.".format(error)
+            msg = f"Could not set new requester for the ticket. Error: {error}."
             logger.error(msg)
             raise IOError(msg)
 
@@ -282,19 +288,20 @@ class Secure_Change_Helper(Secure_API_Helper):
         :param requester_id: The ID of the requestor (on behalf)
         :type requester_id: str|int
         """
-        logger.info("Canceling ticket with ID {}".format(ticket_id))
-        requester_info = ""
-        if requester_id:
-            requester_info = "?requester_id={}".format(requester_id)
+        logger.info(f"Canceling ticket with ID {ticket_id}")
+        requester_info = f"?requester_id={requester_id}" if requester_id else ""
         try:
-            self.put_uri("/securechangeworkflow/api/securechange/tickets/{}/cancel{}".format(ticket_id, requester_info),
-                         expected_status_codes=[200, 201])
+            self.put_uri(
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/cancel{requester_info}",
+                expected_status_codes=[200, 201],
+            )
+
         except REST_Not_Found_Error as error:
-            message = "Could not cancel ticket, error was '{}'.".format(error)
+            message = f"Could not cancel ticket, error was '{error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as error:
-            message = "Could not cancel ticket, error was '{}'.".format(error)
+            message = f"Could not cancel ticket, error was '{error}'."
             logger.error(message)
             raise IOError(message)
 
@@ -319,15 +326,17 @@ class Secure_Change_Helper(Secure_API_Helper):
         step_id = task.get_parent_node().id
         try:
             self.put_uri(
-                "/securechangeworkflow/api/securechange/tickets/{}/steps/{}/tasks/{}".format(ticket_id, step_id,
-                                                                                             task.id), task_xml,
-                expected_status_codes=200)
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/steps/{step_id}/tasks/{task.id}",
+                task_xml,
+                expected_status_codes=200,
+            )
+
         except REST_Bad_Request_Error as update_error:
-            message = "Could not update task, error was '{}'.".format(update_error)
+            message = f"Could not update task, error was '{update_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as update_error:
-            message = "Could not update task, error was '{}'.".format(update_error)
+            message = f"Could not update task, error was '{update_error}'."
             logger.error(message)
             raise IOError(message)
         return True
@@ -354,17 +363,17 @@ class Secure_Change_Helper(Secure_API_Helper):
         task_id = field.get_parent_node().id
         try:
             self.put_uri(
-                "/securechangeworkflow/api/securechange/tickets/{}/steps/{}/tasks/{}/fields/{}".format(ticket_id,
-                                                                                                       step_id,
-                                                                                                       task_id,
-                                                                                                       field.id),
-                field_xml, expected_status_codes=200)
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/steps/{step_id}/tasks/{task_id}/fields/{field.id}",
+                field_xml,
+                expected_status_codes=200,
+            )
+
         except REST_Bad_Request_Error as update_error:
-            message = "Could not update field, error was '{}'.".format(update_error)
+            message = f"Could not update field, error was '{update_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as update_error:
-            message = "Could not update field, error was '{}'.".format(update_error)
+            message = f"Could not update field, error was '{update_error}'."
             logger.error(message)
             raise IOError(message)
         return True
@@ -378,21 +387,25 @@ class Secure_Change_Helper(Secure_API_Helper):
         :type task_id: int|str
         :return: MultiGroupChangeImplementResult
         """
-        logger.info("Running implementation of the multi group change for ticket {}".format(ticket_id))
+        logger.info(
+            f"Running implementation of the multi group change for ticket {ticket_id}"
+        )
+
         if not task_id:
             ticket = self.get_ticket_by_id(ticket_id)
             task_id = ticket.get_current_task().id
         try:
-            response = self.put_uri("/securechangeworkflow/api/securechange/"
-                                    "tickets/{}/steps/current/tasks/{}"
-                                    "/multi_group_change/implement".format(ticket_id, task_id),
-                                    expected_status_codes=[200, 201]).response.content
+            response = self.put_uri(
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/steps/current/tasks/{task_id}/multi_group_change/implement",
+                expected_status_codes=[200, 201],
+            ).response.content
+
         except (REST_Bad_Request_Error, REST_Not_Found_Error, REST_Unauthorized_Error) as error:
-            message = "Could rum multi group implementation. Error: '{}'.".format(error)
+            message = f"Could rum multi group implementation. Error: '{error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as error:
-            message = "Could rum multi group implementation. Error: '{}'.".format(error)
+            message = f"Could rum multi group implementation. Error: '{error}'."
             logger.error(message)
             raise IOError(message)
         return MultiGroupChangeImplementResult.from_xml_string(response)
@@ -406,8 +419,7 @@ class Secure_Change_Helper(Secure_API_Helper):
         users_xml_string = self.get_uri("/securechangeworkflow/api/securechange/users",
                                         expected_status_codes=200).response.content
         users_xml_node = ET.fromstring(users_xml_string)
-        users_list = User_List.from_xml_node(users_xml_node)
-        return users_list
+        return User_List.from_xml_node(users_xml_node)
 
     def get_sc_user_by_id(self, user_id):
         """Get the details for the specified SecureChange user.
@@ -418,14 +430,17 @@ class Secure_Change_Helper(Secure_API_Helper):
         logger.debug("Getting username by ID '%s'.", user_id)
 
         try:
-            user_xml_string = self.get_uri("/securechangeworkflow/api/securechange/users/{}".format(user_id),
-                                           expected_status_codes=200).response.content
+            user_xml_string = self.get_uri(
+                f"/securechangeworkflow/api/securechange/users/{user_id}",
+                expected_status_codes=200,
+            ).response.content
+
         except REST_Bad_Request_Error as error:
-            message = "Could not find user with ID {}. Error: '{}'.".format(user_id, error)
+            message = f"Could not find user with ID {user_id}. Error: '{error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as error:
-            message = "Could not find user with ID {}. Error: {}".format(user_id, error)
+            message = f"Could not find user with ID {user_id}. Error: {error}"
             logger.error(message)
             raise IOError(message)
         user_xml_node = ET.fromstring(user_xml_string)
@@ -435,7 +450,7 @@ class Secure_Change_Helper(Secure_API_Helper):
         elif user_type == "group":
             user = Group.from_xml_node(user_xml_node)
         else:
-            logger.warning("The user with ID {} has unsupported type: {}".format(user_id, user_type))
+            logger.warning(f"The user with ID {user_id} has unsupported type: {user_type}")
             raise ValueError
         return user
 
@@ -448,30 +463,30 @@ class Secure_Change_Helper(Secure_API_Helper):
         :type exact_match: bool
         :rtype: User|Group
         """
-        logger.debug("Getting user {}".format(username))
-        exact_match_param = ""
-        if exact_match:
-            exact_match_param = "&exact_name=true"
+        logger.debug(f"Getting user {username}")
+        exact_match_param = "&exact_name=true" if exact_match else ""
         try:
             users_xml_string = self.get_uri(
-                "/securechangeworkflow/api/securechange/users/?user_name={}{}".format(username, exact_match_param),
-                expected_status_codes=200).response.content
+                f"/securechangeworkflow/api/securechange/users/?user_name={username}{exact_match_param}",
+                expected_status_codes=200,
+            ).response.content
+
             found_users = User_List.from_xml_string(users_xml_string)
         except REST_Bad_Request_Error as error:
-            message = "Could not find user '{}'. Error '{}'.".format(username, error)
+            message = f"Could not find user '{username}'. Error '{error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as error:
-            message = "Could not find user '{}'. Error".format(username, error)
+            message = f"Could not find user '{username}'. Error"
             logger.error(message)
             raise IOError(message)
         if not User_List or len(found_users) < 1:
-            msg = "No user '{}' found".format(username)
+            msg = f"No user '{username}' found"
             logger.error(msg)
             raise ValueError(msg)
         elif len(found_users) > 1:
-            msg = "Multiple users that have '{}' in their username are found. " \
-                  "Getting the first with exact name.".format(username)
+            msg = f"Multiple users that have '{username}' in their username are found. Getting the first with exact name."
+
             logger.info(msg)
             found_users = [user for user in found_users if username in user.get_name_fields()]
         return found_users[0]
@@ -483,17 +498,20 @@ class Secure_Change_Helper(Secure_API_Helper):
         :type email: str
         :rtype: User|User_list
         """
-        logger.debug("Getting user with email '{}'".format(email))
+        logger.debug(f"Getting user with email '{email}'")
         try:
-            users_xml_string = self.get_uri("/securechangeworkflow/api/securechange/users/?email={}".format(email),
-                                            expected_status_codes=200).response.content
+            users_xml_string = self.get_uri(
+                f"/securechangeworkflow/api/securechange/users/?email={email}",
+                expected_status_codes=200,
+            ).response.content
+
             found_users = User_List.from_xml_string(users_xml_string)
         except REST_Bad_Request_Error as error:
-            message = "Could not find user with email '{}'. Error '{}'.".format(email, error)
+            message = f"Could not find user with email '{email}'. Error '{error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as error:
-            message = "Could not find user with email '{}'. Error".format(email, error)
+            message = f"Could not find user with email '{email}'. Error"
             logger.error(message)
             raise IOError(message)
         return found_users
@@ -506,17 +524,17 @@ class Secure_Change_Helper(Secure_API_Helper):
         :return: [Member]
         """
         members = []
-        logger.debug("Retrieving all members of the group '{}'".format(group_name))
+        logger.debug(f"Retrieving all members of the group '{group_name}'")
         group = self.get_user_by_username(group_name, exact_match=True)
         if not isinstance(group, Group):
-            raise ValueError("User '{}' is not of type Group".format(group_name))
+            raise ValueError(f"User '{group_name}' is not of type Group")
         for member in group.members:
             if member.get_attribs()[Attributes.XSI_NAMESPACE_TYPE] == "user":
                 members.append(member)
             elif member.get_attribs()[Attributes.XSI_NAMESPACE_TYPE] == "group":
                 members.extend(self.get_all_members_of_group(member.name))
             else:
-                logger.info("User '{}' is of unknown type, skipping.".format(member.name))
+                logger.info(f"User '{member.name}' is of unknown type, skipping.")
         return members
 
     def get_all_members_of_group_by_group_id(self, group_id):
@@ -527,35 +545,34 @@ class Secure_Change_Helper(Secure_API_Helper):
         :return: [Member]
         """
         members = []
-        logger.debug("Retrieving all members of the group with ID '{}'".format(group_id))
+        logger.debug(f"Retrieving all members of the group with ID '{group_id}'")
         group = self.get_sc_user_by_id(group_id)
         if not isinstance(group, Group):
-            raise ValueError("User with ID '{}' is not of type Group".format(group_id))
+            raise ValueError(f"User with ID '{group_id}' is not of type Group")
         for member in group.members:
             if member.get_attribs()[Attributes.XSI_NAMESPACE_TYPE] == "user":
                 members.append(member)
             elif member.get_attribs()[Attributes.XSI_NAMESPACE_TYPE] == "group":
                 members.extend(self.get_all_members_of_group_by_group_id(member.id))
             else:
-                logger.info("User '{}' is of unknown type, skipping.".format(member.name))
+                logger.info(f"User '{member.name}' is of unknown type, skipping.")
         return members
 
     def import_user_from_ldap(self, username, managed_locally=None, ldap_configuration=None):
         logger.debug("Importing user {} from LDAP.")
         user_to_import = User.instantiate_ldap_user_object(username, managed_locally, ldap_configuration)
         user_to_import_xml = user_to_import.to_xml_string().encode()
-        logger.debug("User XML:\n {}".format(user_to_import_xml))
+        logger.debug(f"User XML:\n {user_to_import_xml}")
         try:
             response = self.post_uri("/securechangeworkflow/api/securechange/users/", user_to_import_xml,
                                      expected_status_codes=201)
-            user_id = response.get_created_item_id()
-            return user_id
+            return response.get_created_item_id()
         except REST_Bad_Request_Error as create_error:
-            message = "Could not import user {}, error was '{}'.".format(username, create_error)
+            message = f"Could not import user {username}, error was '{create_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as create_error:
-            message = "Could not import user {}, error was '{}'.".format(username, create_error)
+            message = f"Could not import user {username}, error was '{create_error}'."
             logger.error(message)
             raise IOError(message)
 
@@ -578,17 +595,17 @@ class Secure_Change_Helper(Secure_API_Helper):
         reassign_message = Reassign_Comment(reassign_message)
         try:
             self.put_uri(
-                "/securechangeworkflow/api/securechange/tickets/{}/steps/{}/tasks/{}/reassign/{}".format(ticket_id,
-                                                                                                         step_id,
-                                                                                                         task_obj.id,
-                                                                                                         user_id),
-                reassign_message.to_xml_string(), expected_status_codes=200)
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/steps/{step_id}/tasks/{task_obj.id}/reassign/{user_id}",
+                reassign_message.to_xml_string(),
+                expected_status_codes=200,
+            )
+
         except REST_Bad_Request_Error as update_error:
-            message = "Could not re-assign task, error was '{}'.".format(update_error)
+            message = f"Could not re-assign task, error was '{update_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as update_error:
-            message = "Could not re-assign task, error was '{}'.".format(update_error)
+            message = f"Could not re-assign task, error was '{update_error}'."
             logger.error(message)
             raise IOError(message)
         else:
@@ -612,7 +629,7 @@ class Secure_Change_Helper(Secure_API_Helper):
             user = self.get_user_by_username(username)
             user_id = user.id
         except ValueError as error:
-            message = "Couldn't re-assign task, as user was not found. Error: {}".format(error)
+            message = f"Couldn't re-assign task, as user was not found. Error: {error}"
             logger.error(message)
             raise ValueError(message)
         else:
@@ -635,17 +652,18 @@ class Secure_Change_Helper(Secure_API_Helper):
         step_id = from_task.get_parent_node().id
         reassign_message = Redo_Comment(redo_message)
         try:
-            self.put_uri("/securechangeworkflow/api/securechange/tickets/{}/steps/{}/tasks/{}/redo/{}".format(ticket_id,
-                                                                                                              step_id,
-                                                                                                              from_task.id,
-                                                                                                              to_step_id),
-                    reassign_message.to_xml_string(), expected_status_codes=200)
+            self.put_uri(
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/steps/{step_id}/tasks/{from_task.id}/redo/{to_step_id}",
+                reassign_message.to_xml_string(),
+                expected_status_codes=200,
+            )
+
         except REST_Bad_Request_Error as update_error:
-            message = "Could not redo step, error was '{}'.".format(update_error)
+            message = f"Could not redo step, error was '{update_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as update_error:
-            message = "Could not redo step, error was '{}'.".format(update_error)
+            message = f"Could not redo step, error was '{update_error}'."
             logger.error(message)
             raise IOError(message)
 
@@ -667,12 +685,12 @@ class Secure_Change_Helper(Secure_API_Helper):
         try:
             response_string = self.get_uri(format_url, expected_status_codes=200).response.content
         except REST_Not_Found_Error:
-            message = "Failed to find verifier for ticket id '{}'".format(ticket_id)
+            message = f"Failed to find verifier for ticket id '{ticket_id}'"
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as e:
-            logger.error("testing {}".format(e))
-            message = "Failed to GET verifier results for ticket ID '{}'.".format(ticket_id)
+            logger.error(f"testing {e}")
+            message = f"Failed to GET verifier results for ticket ID '{ticket_id}'."
             logger.error(message)
             raise IOError(message)
         xml_node = ET.fromstring(response_string)
@@ -689,23 +707,25 @@ class Secure_Change_Helper(Secure_API_Helper):
         :raise ValueError: If no requester or/and ticket were found or missing the comment.
         :raise IOError: If there was a communication error.
         """
-        logger.info("Rejecting ticket with ID {} for"
-                    " requester with id {}. Comment: '{}'".format(ticket_id, handler_id, comment))
-        if handler_id:
-            handler_info = "?requester_id={}".format(handler_id)
-        else:
-            handler_info = ''
+        logger.info(
+            f"Rejecting ticket with ID {ticket_id} for requester with id {handler_id}. Comment: '{comment}'"
+        )
+
+        handler_info = f"?requester_id={handler_id}" if handler_id else ''
         ticket_rejection_comment = RejectComment(comment)
         try:
             self.put_uri(
-                "/securechangeworkflow/api/securechange/tickets/{}/reject{}".format(ticket_id, handler_info),
-                ticket_rejection_comment.to_xml_string(), expected_status_codes=[200, 201])
+                f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/reject{handler_info}",
+                ticket_rejection_comment.to_xml_string(),
+                expected_status_codes=[200, 201],
+            )
+
         except (REST_Not_Found_Error, REST_Bad_Request_Error) as error:
-            msg = "Could not reject ticket. Error: {}".format(error)
+            msg = f"Could not reject ticket. Error: {error}"
             logger.error(msg)
             raise ValueError(msg)
         except requests.RequestException as error:
-            msg = "Could not reject ticket. Error: {}.".format(error)
+            msg = f"Could not reject ticket. Error: {error}."
             logger.error(msg)
             raise IOError(msg)
 
@@ -715,15 +735,15 @@ class Secure_Change_Helper(Secure_API_Helper):
         :type status: str
         :raise ValueError: If there is no tickets with the requested status.
         :raise IOError: If there was a communication error."""
-        url = "/securechangeworkflow/api/securechange/tickets?status={}".format(status)
+        url = f"/securechangeworkflow/api/securechange/tickets?status={status}"
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except REST_Not_Found_Error:
-            message = "Failed to find tickets with status '{}'".format(status)
+            message = f"Failed to find tickets with status '{status}'"
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException:
-            message = "Failed to GET tickets with status '{}'.".format(status)
+            message = f"Failed to GET tickets with status '{status}'."
             logger.error(message)
             raise IOError(message)
         xml_node = ET.fromstring(response_string)
@@ -733,15 +753,15 @@ class Secure_Change_Helper(Secure_API_Helper):
         while next_node is not None:
             next_page_url = next_node.attrib['href']
             parsed_url = urlparse(next_page_url)
-            url = '{}?{}'.format(parsed_url.path, parsed_url.query)
+            url = f'{parsed_url.path}?{parsed_url.query}'
             try:
                 response_string = self.get_uri(url, expected_status_codes=200).response.content
             except REST_Not_Found_Error:
-                message = "Failed to find tickets with status '{}'".format(status)
+                message = f"Failed to find tickets with status '{status}'"
                 logger.error(message)
                 raise ValueError(message)
             except requests.RequestException:
-                message = "Failed to GET tickets with status '{}'.".format(status)
+                message = f"Failed to GET tickets with status '{status}'."
                 logger.error(message)
                 raise IOError(message)
             xml_node = ET.fromstring(response_string)
@@ -769,13 +789,13 @@ class Secure_Change_Helper(Secure_API_Helper):
             logger.error("ticket id, step id, task id and ar id must be provided")
             return
 
-        url = "/securechangeworkflow/api/securechange/tickets/{}/steps/{}/tasks/{}/multi_access_request/{}/verifier/topology_map".format(
-            ticket_id, step_id, task_id, ar_id)
+        url = f"/securechangeworkflow/api/securechange/tickets/{ticket_id}/steps/{step_id}/tasks/{task_id}/multi_access_request/{ar_id}/verifier/topology_map"
+
 
         try:
             response_string = self.get_uri(url, expected_status_codes=200).response.content
         except requests.RequestException as e:
-            message = "Failed to get topology map. Error '{}'".format(e)
+            message = f"Failed to get topology map. Error '{e}'"
             logger.critical(message)
             raise IOError(message)
         except REST_Bad_Request_Error as e:
@@ -791,8 +811,7 @@ class Secure_Change_Helper(Secure_API_Helper):
         url = self.get_uri("/securechangeworkflow/api/securechange/devices/excluded",
                            expected_status_codes=200).response.content
         devices_ids_node = ET.fromstring(url)
-        devices_list = ExcludedDevicesList.from_xml_node(devices_ids_node)
-        return devices_list
+        return ExcludedDevicesList.from_xml_node(devices_ids_node)
 
     def put_excluded_devices(self, device_ids_list):
         """Updating excluded devices list in the target suggestion
@@ -810,11 +829,11 @@ class Secure_Change_Helper(Secure_API_Helper):
             self.put_uri("/securechangeworkflow/api/securechange/devices/excluded",
                          device_ids_list_xml, expected_status_codes=200)
         except REST_Bad_Request_Error as update_error:
-            message = "Could not update excluded devices, error was '{}'.".format(update_error)
+            message = f"Could not update excluded devices, error was '{update_error}'."
             logger.error(message)
             raise ValueError(message)
         except requests.RequestException as update_error:
-            message = "Could not update excluded devices, error was '{}'.".format(update_error)
+            message = f"Could not update excluded devices, error was '{update_error}'."
             logger.error(message)
             raise IOError(message)
         return True
@@ -962,7 +981,7 @@ class Access_Request_Generator:
                 ar_target = target_types_dict[target["type"]](target_tag, None, target["address"], None,
                                                               None, cidr)
             else:
-                raise ValueError("Target {} must have netmask or cidr".format(target))
+                raise ValueError(f"Target {target} must have netmask or cidr")
 
         elif target["type"] in [Access_Request_Generator.IPV4_ADDRESS_RANGE,
                                 Access_Request_Generator.IPV6_ADDRESS_RANGE]:
@@ -975,7 +994,7 @@ class Access_Request_Generator:
             ar_target = target_types_dict[target["type"]](target_tag, None, target["address"], None, None,
                                                           target.get("netmask"), None, None, None)
         else:
-            raise ValueError("Unknown target type {}".format(target["type"]))
+            raise ValueError(f'Unknown target type {target["type"]}')
         return ar_target
 
     def create_multi_access_requests(self):
@@ -993,7 +1012,7 @@ class Access_Request_Generator:
             sources = []
             destinations = []
             services = []
-            order = "AR" + str(index + 1)
+            order = f"AR{str(index + 1)}"
             logger.debug("Handling rule %s", rule)
             if not rule["action"] or rule["action"].lower() in allow_keywords:
                 rule["action"] = "Accept"
@@ -1002,7 +1021,7 @@ class Access_Request_Generator:
             elif rule["action"].lower() in remove_keywords:
                 rule["action"] = "Remove"
             else:
-                raise ValueError("Unknown action {}".format(rule["action"]))
+                raise ValueError(f'Unknown action {rule["action"]}')
 
             for target in rule["targets"]:
                 if target is None or target.upper() == Access_Request_Generator.ANY:
@@ -1053,9 +1072,13 @@ class Access_Request_Generator:
             else:
                 defined_service = service
                 valid_protocols = (UDP, TCP)
-            service_to_port = self.predefined_services.get(defined_service)
-            if service_to_port:
-                found_services = ["{} {}".format(s[0], s[1]) for s in service_to_port if s[0] in valid_protocols]
+            if service_to_port := self.predefined_services.get(defined_service):
+                found_services = [
+                    f"{s[0]} {s[1]}"
+                    for s in service_to_port
+                    if s[0] in valid_protocols
+                ]
+
                 normalized_services.extend(found_services)
             else:
                 normalized_services.append(service)
@@ -1101,10 +1124,9 @@ class Access_Request_Generator:
             iana_service = self.predefined_services.get(service_string)
             if iana_service is not None:
                 return Access_Request_Generator.PREDEFINED
-            else:
-                message = "Unable to detect service type for '{}'".format(service_string)
-                logger.critical(message)
-                raise ValueError(message)
+            message = f"Unable to detect service type for '{service_string}'"
+            logger.critical(message)
+            raise ValueError(message)
 
     @staticmethod
     def _split_service_protocol_and_port(service_string, default_protocol="TCP"):
@@ -1126,16 +1148,19 @@ class Access_Request_Generator:
             protocol_first_regex_match = re.match(protocol_first_regex, service_string)
             port_only_regex_match = re.match(port_only_regex, service_string)
             if port_first_regex_match:
-                port = port_first_regex_match.group(1)
-                protocol = port_first_regex_match.group(2)
+                port = port_first_regex_match[1]
+                protocol = port_first_regex_match[2]
             elif protocol_first_regex_match:
-                protocol = protocol_first_regex_match.group(1)
-                port = protocol_first_regex_match.group(2)
+                protocol = protocol_first_regex_match[1]
+                port = protocol_first_regex_match[2]
             elif port_only_regex_match:
                 protocol = default_protocol
-                port = port_only_regex_match.group(1)
+                port = port_only_regex_match[1]
             else:
-                raise ValueError("Could not match protocol and port of service {}.".format(service_string))
+                raise ValueError(
+                    f"Could not match protocol and port of service {service_string}."
+                )
+
         if port == "0":
             port = "1-65535"
         protocol = protocol.upper()
@@ -1170,15 +1195,15 @@ class Access_Request_Generator:
         any_type_strings = [Access_Request_Generator.ANY, "0.0.0.0", "0.0.0.0/0"]
         internet_type_strings = [Access_Request_Generator.INTERNET]
         ipv4_address_regex = r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|/\d{1,2})?"
-        ipv4_address_range_regex = "{}-{}".format(ipv4_address_regex, ipv4_address_regex)
+        ipv4_address_range_regex = f"{ipv4_address_regex}-{ipv4_address_regex}"
         # noinspection PyPep8
         ipv6_address_regex = r'(?:::|(?:(?:[a-fA-F0-9]{1,4}):){7}(?:(?:[a-fA-F0-9]{1,4}))|(?::(?::(?:[a-fA-F0-9]{1,' \
-                             r'4})){1,6})|(?:(?:(?:[a-fA-F0-9]{1,4}):){1,6}:)|(?:(?:(?:[a-fA-F0-9]{1,4}):)(?::(?:[' \
-                             r'a-fA-F0-9]{1,4})){1,6})|(?:(?:(?:[a-fA-F0-9]{1,4}):){2}(?::(?:[a-fA-F0-9]{1,4})){1,' \
-                             r'5})|(?:(?:(?:[a-fA-F0-9]{1,4}):){3}(?::(?:[a-fA-F0-9]{1,4})){1,4})|(?:(?:(?:[' \
-                             r'a-fA-F0-9]{1,4}):){4}(?::(?:[a-fA-F0-9]{1,4})){1,3})|(?:(?:(?:[a-fA-F0-9]{1,' \
-                             r'4}):){5}(?::(?:[a-fA-F0-9]{1,4})){1,2}))(?:/[0-9]+)?'
-        ipv6_address_range_regex = "{}-{}".format(ipv6_address_regex, ipv6_address_regex)
+                                 r'4})){1,6})|(?:(?:(?:[a-fA-F0-9]{1,4}):){1,6}:)|(?:(?:(?:[a-fA-F0-9]{1,4}):)(?::(?:[' \
+                                 r'a-fA-F0-9]{1,4})){1,6})|(?:(?:(?:[a-fA-F0-9]{1,4}):){2}(?::(?:[a-fA-F0-9]{1,4})){1,' \
+                                 r'5})|(?:(?:(?:[a-fA-F0-9]{1,4}):){3}(?::(?:[a-fA-F0-9]{1,4})){1,4})|(?:(?:(?:[' \
+                                 r'a-fA-F0-9]{1,4}):){4}(?::(?:[a-fA-F0-9]{1,4})){1,3})|(?:(?:(?:[a-fA-F0-9]{1,' \
+                                 r'4}):){5}(?::(?:[a-fA-F0-9]{1,4})){1,2}))(?:/[0-9]+)?'
+        ipv6_address_range_regex = f"{ipv6_address_regex}-{ipv6_address_regex}"
         if network_object_string.upper() in any_type_strings:
             object_type = Access_Request_Generator.ANY
         elif network_object_string in internet_type_strings:
@@ -1227,7 +1252,7 @@ class Access_Request_Generator:
             elif target_type == Access_Request_Generator.OBJECT:
                 address, netmask = raw_target.split("/")
             else:
-                raise ValueError("Unknown target type '{}'".format(target_type))
+                raise ValueError(f"Unknown target type '{target_type}'")
             if netmask and len(netmask) <= 3:  # this is be used for both IPV4 and IPV6
                 targets.append({"address": address, "cidr": netmask, "type": target_type})
             else:
@@ -1311,14 +1336,13 @@ class Step_Task_Field_Copier:
                     continue
                 destination_field.set_field_value(source_field.get_field_value())
                 destination_fields.append(destination_field)
+            elif self.ignore_missing_fields:
+                logger.info("Skipping missing field with name '%s'.", source_field.name)
             else:
-                if self.ignore_missing_fields:
-                    logger.info("Skipping missing field with name '%s'.", source_field.name)
-                else:
-                    message = "Could not find field with name '{}' and type '{}' in destination task.".format(
-                        source_field.name, type(source_field))
-                    logger.critical(message)
-                    raise ValueError(message)
+                message = f"Could not find field with name '{source_field.name}' and type '{type(source_field)}' in destination task."
+
+                logger.critical(message)
+                raise ValueError(message)
         if submit_fields:
             for destination_field in destination_fields:
                 try:
@@ -1377,14 +1401,13 @@ class Secure_Change_API_Handler:
 
     def _register_items(self, dict_name, items, func, args, kwargs):
         item_dict = getattr(self, dict_name)
-        if item_dict is not None:
-            if isinstance(items, (list, tuple)):
-                for item in items:
-                    item_dict[item] = func, args, kwargs
-            else:
-                item_dict[items] = func, args, kwargs
+        if item_dict is None:
+            raise ValueError(f"No attribute with the name '{dict_name}'.")
+        if isinstance(items, (list, tuple)):
+            for item in items:
+                item_dict[item] = func, args, kwargs
         else:
-            raise ValueError("No attribute with the name '{}'.".format(dict_name))
+            item_dict[items] = func, args, kwargs
 
     def register_step(self, step_name, func, *args, **kwargs):
         """
@@ -1438,7 +1461,7 @@ class Secure_Change_API_Handler:
 
         for action in actions:
             if action not in Secure_Change_API_Handler.TRIGGER_ACTIONS:
-                raise ValueError("Unknown trigger action '{}'.".format(action))
+                raise ValueError(f"Unknown trigger action '{action}'.")
 
         self._register_items("actions", actions, func, args, kwargs)
 
@@ -1448,7 +1471,7 @@ class Secure_Change_API_Handler:
 
         for auto_step in auto_steps:
             if auto_step not in Secure_Change_API_Handler.AUTO_STEPS:
-                raise ValueError("Unknown auto step '{}'.".format(auto_step))
+                raise ValueError(f"Unknown auto step '{auto_step}'.")
 
         self._register_items("auto_steps_failures", auto_steps, func, args, kwargs)
 
@@ -1545,9 +1568,10 @@ class Secure_Change_API_Handler:
         try:
             func(*args, **kwargs)
         except Exception as call_error:
-            print("An error occurred while executing the function '{}' for ticket ID '{}'. Please check the logs for a "
-                  "full "
-                  "traceback.".format(func.__name__, self.ticket.id))
+            print(
+                f"An error occurred while executing the function '{func.__name__}' for ticket ID '{self.ticket.id}'. Please check the logs for a full traceback."
+            )
+
             logger.error("Got the following error while executing the function '%s' for ticket ID '%s': "
                          "'%s'.\nTraceback is '%s'.", func.__name__, self.ticket.id, call_error, traceback.format_exc())
             sys.exit(1)

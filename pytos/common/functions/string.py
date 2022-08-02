@@ -24,7 +24,7 @@ def str_to_bool(bool_string):
     elif bool_string in ["no", "n", "false", "f", "0", "disable"]:
         return False
     else:
-        raise ValueError("Cannot resolve '{}' to boolean value.".format(bool_string))
+        raise ValueError(f"Cannot resolve '{bool_string}' to boolean value.")
 
 
 def read_multiline_str_from_stdin():
@@ -33,7 +33,7 @@ def read_multiline_str_from_stdin():
     while True:
         try:
             line = input()
-            input_string += "{}\n".format(line)
+            input_string += f"{line}\n"
         except EOFError:
             return input_string
 
@@ -55,9 +55,8 @@ def get_csv_parser(csv_file, encoding=None, delimiter=None, comment_char=None):
     :return: A CSV parser for the specified file.
     :rtype: _csv.reader
     """
-    default_comment_char = "#"
-    csv_strings_temp = []
     if comment_char is None:
+        default_comment_char = "#"
         comment_char = default_comment_char
     try:
         if hasattr(csv_file, "read"):
@@ -76,16 +75,19 @@ def get_csv_parser(csv_file, encoding=None, delimiter=None, comment_char=None):
     except (FileNotFoundError, PermissionError) as file_open_error:
         logger.error("Could not open file '%s', error was '%s'.", csv_file, file_open_error)
         raise file_open_error
-    for line in csv_strings[:]:
-        # Strip comment lines
-        if not line.startswith(comment_char) and not line.isspace():
-            if any(item.strip() for item in line.split(",")):
-                csv_strings_temp.append(line)
-    if delimiter is not None:
-        csv_reader = csv.reader(csv_strings_temp, delimiter=delimiter)
-    else:
-        csv_reader = csv.reader(csv_strings_temp)
-    return csv_reader
+    csv_strings_temp = [
+        line
+        for line in csv_strings[:]
+        if not line.startswith(comment_char)
+        and not line.isspace()
+        and any(item.strip() for item in line.split(","))
+    ]
+
+    return (
+        csv.reader(csv_strings_temp, delimiter=delimiter)
+        if delimiter is not None
+        else csv.reader(csv_strings_temp)
+    )
 
 
 def strip_ansi_codes(ansi_str):

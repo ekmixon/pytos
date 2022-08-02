@@ -69,10 +69,7 @@ def get_xml_int_value(xml_node, xpath, default_value=None):
     :raise ValueError: If the XPATH expression could not be resolved to an XML node.
     """
     text_value = get_xml_text_value(xml_node, xpath, default_value)
-    if text_value is not None:
-        return int(text_value)
-    else:
-        return text_value
+    return int(text_value) if text_value is not None else text_value
 
 
 def get_xml_node(xml_node, xpath, optional=False):
@@ -87,7 +84,8 @@ def get_xml_node(xml_node, xpath, optional=False):
     logger.debug("Getting XML node from XML element: '%s'", xml_node.tag)  # @UndefinedVariable
     found_node = xml_node.find(xpath)
     if found_node is None and not optional:
-        message = "Could not find XML element using XPath expression '{}' under XML node '{}'".format(xpath, xml_node)
+        message = f"Could not find XML element using XPath expression '{xpath}' under XML node '{xml_node}'"
+
         logger.error(message)
         raise XMLTagNotFound(message)
     return found_node
@@ -101,11 +99,11 @@ def create_tagless_xml_objects_list(xml_node, xml_tag, object_class):
     :param object_class: 
     :return: 
     """
-    objects = []
-    for xml_tag_node in xml_node.iter(tag=xml_tag):
-        if xml_tag_node:
-            objects.append(object_class.from_xml_node(xml_tag_node))
-    return objects
+    return [
+        object_class.from_xml_node(xml_tag_node)
+        for xml_tag_node in xml_node.iter(tag=xml_tag)
+        if xml_tag_node
+    ]
 
 
 class XMLTagNotFound(ValueError):
